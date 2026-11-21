@@ -4,7 +4,7 @@ Who can call each API route (all under `/api`). ✓ = allowed, blank = 403 Forbi
 
 This table mirrors `backend/tests/Feature/PermissionMatrixTest.php`, which calls every route as every role. If you change a permission, update both.
 
-**Fixture assumptions:** *Teacher* teaches the class and advises the student; *Dept. Head* heads the course's department; *Student* is enrolled; *Registrar* wrote the notice; the student filed the complaint and owns the invoice. Other teachers, heads and students get the same answer as a non-member (403).
+**Fixture assumptions:** *Teacher* teaches the class and advises the student; *Dept. Head* heads the course's department; *Student* is enrolled; *Registrar* wrote the notice; the teacher wrote the post and the student wrote the comment; the student filed the complaint and owns the invoice. Other teachers, heads and students get the same answer as a non-member (403).
 
 Two extra rules apply everywhere: deactivated accounts get 403 (`account_inactive`), and accounts with a temporary password get 403 (`password_change_required`) on everything except `auth/me`, `auth/logout` and `auth/password`.
 
@@ -48,6 +48,8 @@ Two extra rules apply everywhere: deactivated accounts get 403 (`account_inactiv
 | `POST classes/{section}/join-code` | ✓ | ✓ |  | ✓ |  |  |
 | `GET classes/{section}/posts` | ✓ | ✓ | ✓ | ✓ |  | ✓ |
 | `POST classes/{section}/posts` | ✓ | ✓ | ✓ | ✓ |  | ✓ |
+| `PUT classes/{section}/stream-settings` | ✓ | ✓ |  | ✓ |  |  |
+| `GET classes/{section}/upcoming` | ✓ | ✓ | ✓ | ✓ |  | ✓ |
 | `GET classes/{section}/materials` | ✓ | ✓ | ✓ | ✓ |  | ✓ |
 | `POST classes/{section}/materials` | ✓ | ✓ |  | ✓ |  |  |
 | `GET classes/{section}/assignments` | ✓ | ✓ | ✓ | ✓ |  | ✓ |
@@ -63,9 +65,11 @@ Two extra rules apply everywhere: deactivated accounts get 403 (`account_inactiv
 | `GET classes/{section}/attendance/report` | ✓ | ✓ | ✓ | ✓ |  | ✓ |
 | `GET classes/{section}/results` | ✓ | ✓ | ✓ | ✓ |  |  |
 | `POST classes/{section}/results/publish` | ✓ | ✓ | ✓ |  |  |  |
-| `PATCH posts/{post}` | ✓ | ✓ |  | ✓ |  |  |
+| `PATCH posts/{post}` | ✓ |  |  | ✓ |  |  |
 | `DELETE posts/{post}` | ✓ | ✓ |  | ✓ |  |  |
 | `POST posts/{post}/comments` | ✓ | ✓ | ✓ | ✓ |  | ✓ |
+| `PATCH comments/{comment}` | ✓ |  |  |  |  | ✓ |
+| `DELETE comments/{comment}` | ✓ | ✓ |  | ✓ |  | ✓ |
 | `DELETE materials/{material}` | ✓ | ✓ |  | ✓ |  |  |
 | `GET assignments/{assignment}` | ✓ | ✓ | ✓ | ✓ |  | ✓ |
 | `PATCH assignments/{assignment}` | ✓ | ✓ |  | ✓ |  |  |

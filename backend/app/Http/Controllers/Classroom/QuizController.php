@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Classroom;
 
 use App\Http\Controllers\Controller;
 use App\Models\CourseSection;
+use App\Models\Post;
 use App\Models\Quiz;
 use App\Models\QuizAttempt;
 use Illuminate\Http\JsonResponse;
@@ -65,6 +66,10 @@ class QuizController extends Controller
 
             return $quiz;
         });
+
+        if ($quiz->published_at) {
+            Post::announceClasswork($section, $request->user(), 'quiz', $quiz->id, $quiz->title);
+        }
 
         return response()->json($quiz->load('questions'), 201);
     }

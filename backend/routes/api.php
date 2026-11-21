@@ -49,6 +49,11 @@ Route::get('/public/programs', [ApplicationController::class, 'programs']);
 Route::post('/applications', [ApplicationController::class, 'store'])->middleware('throttle:5,1');
 Route::post('/applications/status', [ApplicationController::class, 'status'])->middleware('throttle:10,1');
 
+// Class stream attachments: signed, time-limited links (no token needed for <img>/<iframe> previews)
+Route::get('/files/post-attachments/{attachment}', [StreamController::class, 'attachment'])
+    ->middleware('signed')
+    ->name('post-attachments.show');
+
 // Sandbox payment gateway callback (disabled when PAYMENT_SANDBOX=false)
 Route::get('/payments/{trxId}/sandbox-callback', [PaymentController::class, 'callback']);
 
@@ -88,6 +93,8 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
 
         Route::get('/posts', [StreamController::class, 'index']);
         Route::post('/posts', [StreamController::class, 'store']);
+        Route::put('/stream-settings', [StreamController::class, 'settings']);
+        Route::get('/upcoming', [StreamController::class, 'upcoming']);
 
         Route::get('/materials', [MaterialController::class, 'index']);
         Route::post('/materials', [MaterialController::class, 'store']);
@@ -114,6 +121,8 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
     Route::patch('/posts/{post}', [StreamController::class, 'update']);
     Route::delete('/posts/{post}', [StreamController::class, 'destroy']);
     Route::post('/posts/{post}/comments', [StreamController::class, 'comment']);
+    Route::patch('/comments/{comment}', [StreamController::class, 'updateComment']);
+    Route::delete('/comments/{comment}', [StreamController::class, 'destroyComment']);
 
     Route::delete('/materials/{material}', [MaterialController::class, 'destroy']);
 

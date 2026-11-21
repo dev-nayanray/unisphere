@@ -16,8 +16,13 @@ class CourseSection extends Model
 {
     protected $fillable = [
         'course_id', 'semester_id', 'teacher_id', 'section', 'room', 'capacity',
-        'join_code', 'schedule', 'grading_scheme', 'cover_color',
+        'join_code', 'schedule', 'grading_scheme', 'cover_color', 'stream_permission',
     ];
+
+    /** stream_permission values: what students may do in the class stream. */
+    public const STREAM_POST_COMMENT = 'post_comment';
+    public const STREAM_COMMENT = 'comment';
+    public const STREAM_NONE = 'none';
 
     protected function casts(): array
     {

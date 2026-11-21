@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Classroom;
 use App\Http\Controllers\Controller;
 use App\Models\CourseSection;
 use App\Models\Material;
+use App\Models\Post;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -38,6 +39,7 @@ class MaterialController extends Controller
         unset($data['file']);
 
         $material = $section->materials()->create([...$data, 'author_id' => $request->user()->id]);
+        Post::announceClasswork($section, $request->user(), 'material', $material->id, $material->title);
 
         return response()->json($material, 201);
     }

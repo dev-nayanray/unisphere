@@ -7,7 +7,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PostComment extends Model
 {
-    protected $fillable = ['post_id', 'author_id', 'body'];
+    protected $fillable = ['post_id', 'author_id', 'body', 'edited_at'];
+
+    protected function casts(): array
+    {
+        return ['edited_at' => 'datetime'];
+    }
 
     public function post(): BelongsTo
     {

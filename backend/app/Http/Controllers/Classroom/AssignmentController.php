@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Classroom;
 use App\Http\Controllers\Controller;
 use App\Models\Assignment;
 use App\Models\CourseSection;
+use App\Models\Post;
 use App\Notifications\NewClassworkPosted;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -51,6 +52,7 @@ class AssignmentController extends Controller
 
         if ($assignment->published_at) {
             Notification::send($section->students()->get(), new NewClassworkPosted($assignment));
+            Post::announceClasswork($section, $request->user(), 'assignment', $assignment->id, $assignment->title);
         }
 
         return response()->json($assignment, 201);
@@ -78,10 +80,18 @@ class AssignmentController extends Controller
 
         $data = $this->validated($request, partial: true);
         unset($data['attachment'], $data['publish']);
+        $wasDraft = $assignment->published_at === null;
         if ($request->has('publish')) {
             $data['published_at'] = $request->boolean('publish') ? ($assignment->published_at ?? now()) : null;
         }
         $assignment->update($data);
+
+        // Publishing a draft announces it, exactly like publishing on creation.
+        if ($wasDraft && $assignment->published_at) {
+            $section = $assignment->section;
+            Notification::send($section->students()->get(), new NewClassworkPosted($assignment));
+            Post::announceClasswork($section, $request->user(), 'assignment', $assignment->id, $assignment->title);
+        }
 
         return response()->json($assignment);
     }

@@ -111,7 +111,11 @@ class PermissionMatrixTest extends TestCase
             'GET classes/{section}/results' => self::STAFF,
             'POST classes/{section}/results/publish' => [self::SA, self::REG, self::HEAD],
 
-            'PATCH posts/{post}' => self::MANAGE, // teacher is the author
+            'PATCH posts/{post}' => [self::SA, self::TEA], // only the author (teacher) edits
+            'PUT classes/{section}/stream-settings' => self::MANAGE,
+            'GET classes/{section}/upcoming' => self::MEMBERS,
+            'PATCH comments/{comment}' => [self::SA, self::STU], // student wrote the comment
+            'DELETE comments/{comment}' => [self::SA, self::REG, self::TEA, self::STU],
             'DELETE posts/{post}' => self::MANAGE,
             'POST posts/{post}/comments' => self::MEMBERS,
             'DELETE materials/{material}' => self::MANAGE,
@@ -225,7 +229,8 @@ class PermissionMatrixTest extends TestCase
             'course_section_id' => $section->id, 'student_id' => $student->id, 'status' => Registration::APPROVED,
         ]);
 
-        $post = Post::create(['course_section_id' => $section->id, 'author_id' => $teacher->id, 'body' => 'Welcome']);
+        $post = Post::create(['course_section_id' => $section->id, 'author_id' => $teacher->id, 'body' => 'Welcome', 'published_at' => now()]);
+        $comment = $post->comments()->create(['author_id' => $student->id, 'body' => 'Thanks']);
         $material = Material::create([
             'course_section_id' => $section->id, 'author_id' => $teacher->id, 'title' => 'Outline', 'type' => 'link', 'url' => 'https://example.com',
         ]);
@@ -257,7 +262,7 @@ class PermissionMatrixTest extends TestCase
         $other = User::factory()->create();
 
         $this->ids = [
-            'section' => $section->id, 'post' => $post->id, 'material' => $material->id, 'assignment' => $assignment->id,
+            'section' => $section->id, 'post' => $post->id, 'comment' => $comment->id, 'material' => $material->id, 'assignment' => $assignment->id,
             'submission' => $submission->id, 'quiz' => $quiz->id, 'attempt' => $attempt->id, 'session' => $session->id,
             'registration' => $registration->id, 'invoice' => $invoice->id, 'notice' => $notice->id,
             'complaint' => $complaint->id, 'user' => $other->id, 'department' => $dept->id, 'program' => $program->id,

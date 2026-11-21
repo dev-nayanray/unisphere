@@ -120,6 +120,8 @@ class DatabaseSeeder extends Seeder
             'author_id' => $first->teacher_id,
             'body' => 'Welcome to Software Engineering! Please read the course outline in Classwork before our first lab.',
             'is_pinned' => true,
+            'published_at' => now(),
+            'notified_at' => now(),
         ]);
         $first->materials()->create([
             'author_id' => $first->teacher_id, 'title' => 'Course outline', 'topic' => 'Week 1',
