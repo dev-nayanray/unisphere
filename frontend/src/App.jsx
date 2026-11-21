@@ -17,6 +17,7 @@ import Complaints from './pages/Complaints'
 import Users from './pages/admin/Users'
 import Academics from './pages/admin/Academics'
 import Offerings from './pages/admin/Offerings'
+import NotFound from './pages/NotFound'
 
 function RequireAuth({ children, roles }) {
   const { user, ready, hasRole } = useAuth()
@@ -54,7 +55,7 @@ export default function App() {
         <Route path="admin/academics" element={<RequireAuth roles={['registrar']}><Academics /></RequireAuth>} />
         <Route path="admin/offerings" element={<RequireAuth roles={['registrar']}><Offerings /></RequireAuth>} />
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   )
 }

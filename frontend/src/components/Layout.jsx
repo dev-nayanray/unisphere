@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import ErrorBoundary from './ErrorBoundary'
 import NotificationBell from './NotificationBell'
 
 // Each menu item lists the roles that can see it ("*" = everyone).
@@ -26,6 +27,7 @@ const NAV = [
 export default function Layout() {
   const { user, logout, hasRole } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [open, setOpen] = useState(false)
 
   const visible = (roles) => !roles || roles.includes('*') || hasRole(...roles)
@@ -97,7 +99,10 @@ export default function Layout() {
           </div>
         </header>
         <main className="flex-1 p-4 md:p-8">
-          <Outlet />
+          {/* Reset the boundary on navigation so one broken page doesn't stick. */}
+          <ErrorBoundary key={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>
