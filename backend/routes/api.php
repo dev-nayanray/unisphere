@@ -16,6 +16,7 @@ use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Classroom\AssignmentController;
 use App\Http\Controllers\Classroom\ClassroomController;
+use App\Http\Controllers\Classroom\FeedbackCommentController;
 use App\Http\Controllers\Classroom\GradebookController;
 use App\Http\Controllers\Classroom\MaterialController;
 use App\Http\Controllers\Classroom\QuizController;
@@ -57,6 +58,9 @@ Route::get('/files/post-attachments/{attachment}', [StreamController::class, 'at
 Route::get('/files/assignment-attachments/{attachment}', [AssignmentController::class, 'attachment'])
     ->middleware('signed')
     ->name('assignment-attachments.show');
+Route::get('/files/submissions/{submission}', [SubmissionController::class, 'file'])
+    ->middleware('signed')
+    ->name('submission-files.show');
 
 // Sandbox payment gateway callback (disabled when PAYMENT_SANDBOX=false)
 Route::get('/payments/{trxId}/sandbox-callback', [PaymentController::class, 'callback']);
@@ -143,6 +147,18 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
     Route::delete('/assignments/{assignment}', [AssignmentController::class, 'destroy']);
     Route::post('/assignments/{assignment}/submit', [SubmissionController::class, 'store']);
     Route::post('/assignments/{assignment}/grades', [SubmissionController::class, 'gradeOffline']);
+    Route::post('/assignments/{assignment}/unsubmit', [SubmissionController::class, 'unsubmit']);
+    Route::get('/assignments/{assignment}/workspace', [SubmissionController::class, 'workspace']);
+    Route::post('/assignments/{assignment}/return', [SubmissionController::class, 'returnMany']);
+    Route::get('/assignments/{assignment}/submissions.zip', [SubmissionController::class, 'zip']);
+    Route::get('/assignments/{assignment}/marks.csv', [SubmissionController::class, 'exportMarks']);
+    Route::post('/assignments/{assignment}/marks-import', [SubmissionController::class, 'importMarks']);
+
+    Route::middleware('role:registrar,department_head,teacher')->group(function () {
+        Route::get('/comment-bank', [FeedbackCommentController::class, 'index']);
+        Route::post('/comment-bank', [FeedbackCommentController::class, 'store']);
+        Route::delete('/comment-bank/{feedback}', [FeedbackCommentController::class, 'destroy']);
+    });
     Route::patch('/submissions/{submission}/grade', [SubmissionController::class, 'grade']);
 
     Route::get('/quizzes/{quiz}', [QuizController::class, 'show']);

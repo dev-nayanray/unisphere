@@ -50,7 +50,7 @@ class DashboardController extends Controller
         $pending = Assignment::query()
             ->whereIn('course_section_id', $sectionIds)
             ->visibleToStudent($user)
-            ->whereDoesntHave('submissions', fn ($q) => $q->where('student_id', $user->id))
+            ->whereDoesntHave('submissions', fn ($q) => $q->where('student_id', $user->id)->whereNotNull('submitted_at'))
             ->with('section.course:id,code,title')
             ->orderBy('due_at')
             ->limit(8)
@@ -84,6 +84,7 @@ class DashboardController extends Controller
 
         $toGrade = \App\Models\Submission::query()
             ->whereNull('marks')
+            ->whereNotNull('submitted_at')
             ->whereHas('assignment', fn ($q) => $q->whereIn('course_section_id', $sections->pluck('id')))
             ->count();
 

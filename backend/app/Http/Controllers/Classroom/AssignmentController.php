@@ -41,7 +41,18 @@ class AssignmentController extends Controller
             ->orderByRaw('due_at IS NULL, due_at')
             ->get();
 
-        return response()->json($assignments);
+        if ($manage) {
+            return response()->json($assignments);
+        }
+
+        // Students: hide marks until the teacher returns them.
+        return response()->json($assignments->map(fn (Assignment $a) => [
+            ...$a->toArray(),
+            'submissions' => $a->submissions->map(fn ($s) => [
+                ...$s->forStudent(),
+                'effective_marks' => $s->isReturned() ? $a->effectiveMarks($s) : null,
+            ])->values(),
+        ]));
     }
 
     public function store(Request $request, CourseSection $section): JsonResponse
@@ -95,9 +106,10 @@ class AssignmentController extends Controller
             ...$assignment->toArray(),
             'rubric_max' => $assignment->rubricMax(),
             'submissions' => $mine ? [[
-                ...$mine->toArray(),
+                ...$mine->forStudent(),
                 'late_penalty_percent' => $assignment->latePenaltyPercent($mine),
-                'effective_marks' => $assignment->effectiveMarks($mine),
+                'effective_marks' => $mine->isReturned() ? $assignment->effectiveMarks($mine) : null,
+                'versions' => $mine->versions()->get(['id', 'number', 'submitted_at', 'is_late', 'file_name']),
             ]] : [],
         ]);
     }

@@ -9,6 +9,7 @@ use App\Models\Complaint;
 use App\Models\Course;
 use App\Models\CourseSection;
 use App\Models\Department;
+use App\Models\FeedbackComment;
 use App\Models\Invoice;
 use App\Models\Material;
 use App\Models\Notice;
@@ -132,6 +133,15 @@ class PermissionMatrixTest extends TestCase
             'POST assignments/{assignment}/submit' => [self::STU],
             'POST assignments/{assignment}/grades' => self::MANAGE,
             'PATCH submissions/{submission}/grade' => self::MANAGE,
+            'POST assignments/{assignment}/unsubmit' => [self::STU],
+            'GET assignments/{assignment}/workspace' => self::MANAGE,
+            'POST assignments/{assignment}/return' => self::MANAGE,
+            'GET assignments/{assignment}/submissions.zip' => self::MANAGE,
+            'GET assignments/{assignment}/marks.csv' => self::MANAGE,
+            'POST assignments/{assignment}/marks-import' => self::MANAGE,
+            'GET comment-bank' => self::STAFF,
+            'POST comment-bank' => self::STAFF,
+            'DELETE comment-bank/{feedback}' => [self::SA, self::TEA], // the teacher's own snippet
 
             'GET quizzes/{quiz}' => self::MEMBERS,
             'POST quizzes/{quiz}/start' => [self::STU],
@@ -248,6 +258,7 @@ class PermissionMatrixTest extends TestCase
         $submission = Submission::create([
             'assignment_id' => $assignment->id, 'student_id' => $student->id, 'content' => 'Answer', 'submitted_at' => now(),
         ]);
+        $feedback = FeedbackComment::create(['teacher_id' => $teacher->id, 'text' => 'Well done']);
         $quiz = Quiz::create([
             'course_section_id' => $section->id, 'author_id' => $teacher->id, 'title' => 'Quiz 1', 'duration_minutes' => 10, 'published_at' => now(),
         ]);
@@ -270,7 +281,7 @@ class PermissionMatrixTest extends TestCase
         $other = User::factory()->create();
 
         $this->ids = [
-            'section' => $section->id, 'post' => $post->id, 'comment' => $comment->id, 'topic' => $topic->id, 'attachment' => $attachment->id, 'material' => $material->id, 'assignment' => $assignment->id,
+            'section' => $section->id, 'post' => $post->id, 'comment' => $comment->id, 'topic' => $topic->id, 'attachment' => $attachment->id, 'feedback' => $feedback->id, 'material' => $material->id, 'assignment' => $assignment->id,
             'submission' => $submission->id, 'quiz' => $quiz->id, 'attempt' => $attempt->id, 'session' => $session->id,
             'registration' => $registration->id, 'invoice' => $invoice->id, 'notice' => $notice->id,
             'complaint' => $complaint->id, 'user' => $other->id, 'department' => $dept->id, 'program' => $program->id,

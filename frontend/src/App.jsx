@@ -27,6 +27,7 @@ import Apply, { ApplicationStatus } from './pages/Apply'
 import Import from './pages/admin/Import'
 import Admissions from './pages/admin/Admissions'
 import Routine from './pages/Routine'
+import GradingWorkspace from './pages/classroom/GradingWorkspace'
 
 function RequireAuth({ children, roles }) {
   const { user, ready, hasRole, logout } = useAuth()
@@ -66,6 +67,7 @@ export default function App() {
         <Route path="classes" element={<Classes />} />
         <Route path="classes/:id/*" element={<Classroom />} />
         <Route path="assignments/:id" element={<AssignmentDetail />} />
+        <Route path="assignments/:id/grade" element={<RequireAuth roles={['teacher', 'registrar']}><GradingWorkspace /></RequireAuth>} />
         <Route path="notices" element={<Notices />} />
         <Route path="complaints" element={<Complaints />} />
         <Route path="profile" element={<Profile />} />

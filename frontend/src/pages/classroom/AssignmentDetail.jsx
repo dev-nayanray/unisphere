@@ -5,7 +5,7 @@ import { useApi } from '../../api/useApi'
 import Attachments from '../../components/Attachments'
 import RichText from '../../components/RichText'
 import { useToast } from '../../components/Toast'
-import { Badge, ErrorBox, Loading, Modal, formatDate } from '../../components/ui'
+import { Badge, ErrorBox, Loading, formatDate } from '../../components/ui'
 
 const LATE = {
   accept: 'Late work accepted',
@@ -43,7 +43,7 @@ export default function AssignmentDetail() {
         {a.criteria?.length > 0 && <RubricTable criteria={a.criteria} />}
       </div>
 
-      {isTeacher ? <TeacherView a={a} onChange={reload} /> : <StudentView a={a} onChange={reload} />}
+      {isTeacher ? <TeacherView a={a} /> : <StudentView a={a} onChange={reload} />}
     </div>
   )
 }
@@ -87,14 +87,13 @@ function StudentView({ a, onChange }) {
   const [file, setFile] = useState(null)
   const [error, setError] = useState(null)
   const closed = a.late_policy === 'reject' && a.due_at && new Date(a.due_at) < new Date()
+  const turnedIn = Boolean(mine?.submitted_at)
+  const returned = Boolean(mine?.returned_at)
 
-  async function submit(e) {
-    e.preventDefault()
-    const body = new FormData()
-    if (content) body.append('content', content)
-    if (file) body.append('file', file)
+  async function call(fn) {
+    setError(null)
     try {
-      const res = await api.post(`/assignments/${a.id}/submit`, body)
+      const res = await fn()
       toast.success(res.data.message)
       onChange()
     } catch (err) {
@@ -102,105 +101,81 @@ function StudentView({ a, onChange }) {
     }
   }
 
+  function submit(e) {
+    e.preventDefault()
+    const body = new FormData()
+    if (content) body.append('content', content)
+    if (file) body.append('file', file)
+    call(() => api.post(`/assignments/${a.id}/submit`, body))
+  }
+
   return (
     <div className="card mt-4">
-      <h2 className="mb-3 font-semibold">Your work</h2>
-      {mine?.marks != null ? (
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="font-semibold">Your work</h2>
+        {returned ? <Badge tone="emerald">Returned</Badge> : turnedIn ? <Badge tone="indigo">Turned in</Badge> : <Badge tone="amber">Assigned</Badge>}
+      </div>
+      <ErrorBox message={error} />
+
+      {returned ? (
         <div>
           <p className="text-2xl font-semibold text-emerald-600">{Number(mine.effective_marks)}/{Number(a.max_marks)}</p>
-          {mine.late_penalty_percent > 0 && (
-            <p className="text-sm text-amber-700">Marked {Number(mine.marks)}, minus {mine.late_penalty_percent}% for being late.</p>
-          )}
-          {mine.feedback && <p className="mt-2 text-sm text-slate-600">Feedback: {mine.feedback}</p>}
+          {mine.late_penalty_percent > 0 && <p className="text-sm text-amber-700">Marked {Number(mine.marks)}, minus {mine.late_penalty_percent}% for being late.</p>}
+          {mine.feedback && <p className="mt-2 whitespace-pre-wrap text-sm text-slate-600">Feedback: {mine.feedback}</p>}
           {a.criteria?.length > 0 && mine.rubric_scores && <RubricTable criteria={a.criteria} selected={mine.rubric_scores} />}
+        </div>
+      ) : turnedIn ? (
+        <div>
+          <p className="text-sm text-slate-600">Turned in {formatDate(mine.submitted_at, true)}{mine.is_late && ' (late)'}.</p>
+          {mine.content && <p className="mt-2 whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-sm">{mine.content}</p>}
+          {mine.file_url && <a href={mine.file_url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-sm text-indigo-600">📎 {mine.file_name}</a>}
+          <button className="btn-ghost mt-3 w-full" onClick={() => call(() => api.post(`/assignments/${a.id}/unsubmit`))}>Unsubmit to make changes</button>
         </div>
       ) : closed ? (
         <p className="text-sm text-rose-600">The due date has passed and late work is not accepted.</p>
       ) : (
         <form onSubmit={submit}>
-          <ErrorBox message={error} />
-          {mine && <p className="mb-2 text-sm text-slate-500">Turned in {formatDate(mine.submitted_at, true)}{mine.is_late && ' (late)'}. You can resubmit until it's graded.</p>}
           <textarea className="input min-h-28" placeholder="Write your answer or add a note" value={content} onChange={(e) => setContent(e.target.value)} />
           <input type="file" className="mt-3 text-sm" onChange={(e) => setFile(e.target.files[0])} />
-          <button className="btn-primary mt-3 w-full">{mine ? 'Resubmit' : 'Turn in'}</button>
+          {mine?.file_name && !file && <p className="mt-1 text-xs text-slate-500">Previous file: {mine.file_name} (choose a new one to replace it)</p>}
+          <button className="btn-primary mt-3 w-full">Turn in</button>
         </form>
+      )}
+
+      {mine?.versions?.length > 0 && (
+        <details className="mt-4 text-xs text-slate-500">
+          <summary className="cursor-pointer">History: {mine.versions.length} turn-in(s)</summary>
+          <ul className="mt-1 space-y-0.5">
+            {mine.versions.map((v) => <li key={v.id}>#{v.number} · {formatDate(v.submitted_at, true)}{v.is_late && ' (late)'}{v.file_name && ` · ${v.file_name}`}</li>)}
+          </ul>
+        </details>
       )}
     </div>
   )
 }
 
-function TeacherView({ a, onChange }) {
-  const toast = useToast()
-  const byStudent = Object.fromEntries((a.submissions || []).map((s) => [s.student_id, s]))
-  const [marks, setMarks] = useState({})
-  const [rubricFor, setRubricFor] = useState(null)
-  const hasRubric = a.criteria?.length > 0
-
-  async function grade(submission, body) {
-    try {
-      await api.patch(`/submissions/${submission.id}/grade`, body)
-      toast.success('Grade saved.')
-      onChange()
-    } catch (err) {
-      toast.error(errorMessage(err))
-    }
-  }
+function TeacherView({ a }) {
+  const subs = a.submissions || []
+  const turnedIn = subs.filter((s) => s.submitted_at).length
+  const graded = subs.filter((s) => s.marks != null).length
+  const returned = subs.filter((s) => s.returned_at).length
 
   return (
-    <div className="card mt-4 overflow-x-auto p-0">
-      <table className="table">
-        <thead>
-          <tr><th>Student</th><th>Status</th><th>Work</th><th>Marks</th><th /></tr>
-        </thead>
-        <tbody>
-          {a.roster.map((st) => {
-            const s = byStudent[st.id]
-            return (
-              <tr key={st.id}>
-                <td className="font-medium">{st.name}</td>
-                <td>{s?.submitted_at ? <Badge tone={s.is_late ? 'amber' : 'emerald'}>{s.is_late ? 'Late' : 'Turned in'}</Badge> : <Badge>Missing</Badge>}</td>
-                <td className="max-w-xs truncate text-slate-600">{s?.content}</td>
-                <td>
-                  {s && hasRubric ? (
-                    <span>{s.marks != null ? `${Number(s.effective_marks)}/${Number(a.max_marks)}` : '—'}</span>
-                  ) : s ? (
-                    <input type="number" className="input w-24" max={a.max_marks} defaultValue={s.marks ?? ''} onChange={(e) => setMarks({ ...marks, [s.id]: e.target.value })} />
-                  ) : null}
-                  {s?.late_penalty_percent > 0 && <span className="block text-xs text-amber-700">−{s.late_penalty_percent}% late</span>}
-                </td>
-                <td>
-                  {s && (hasRubric ? (
-                    <button className="btn-ghost py-1" onClick={() => setRubricFor(s)}>Grade with rubric</button>
-                  ) : (
-                    <button className="btn-ghost py-1" onClick={() => grade(s, { marks: marks[s.id] ?? s.marks })}>Save</button>
-                  ))}
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-      {rubricFor && <RubricGrader a={a} submission={rubricFor} onClose={() => setRubricFor(null)} onSave={(body) => grade(rubricFor, body).then(() => setRubricFor(null))} />}
+    <div className="card mt-4 flex flex-wrap items-center gap-6">
+      <Stat label="Assigned" value={a.roster.length} />
+      <Stat label="Turned in" value={turnedIn} />
+      <Stat label="Graded" value={graded} />
+      <Stat label="Returned" value={returned} />
+      <Link to={`/assignments/${a.id}/grade`} className="btn-primary ml-auto">Open grading workspace</Link>
     </div>
   )
 }
 
-/** Click one level per criterion; the total fills in. */
-function RubricGrader({ a, submission, onClose, onSave }) {
-  const [picked, setPicked] = useState(submission.rubric_scores || {})
-  const [feedback, setFeedback] = useState(submission.feedback || '')
-  const total = a.criteria.reduce((t, c) => t + Number(c.levels.find((l) => l.id === Number(picked[c.id]))?.points || 0), 0)
-  const complete = a.criteria.every((c) => picked[c.id])
-
+function Stat({ label, value }) {
   return (
-    <Modal open title="Grade with rubric" onClose={onClose}>
-      {submission.content && <p className="mb-3 max-h-32 overflow-y-auto rounded-lg bg-slate-50 p-3 text-sm">{submission.content}</p>}
-      <RubricTable criteria={a.criteria} selected={picked} onPick={(cid, lid) => setPicked({ ...picked, [cid]: lid })} />
-      <textarea className="input mt-3" placeholder="Feedback for the student (optional)" value={feedback} onChange={(e) => setFeedback(e.target.value)} />
-      <div className="mt-3 flex items-center justify-between">
-        <p className="text-lg font-semibold">{total} / {Number(a.max_marks)}</p>
-        <button className="btn-primary" disabled={!complete} onClick={() => onSave({ rubric_scores: picked, feedback })}>Save grade</button>
-      </div>
-    </Modal>
+    <div>
+      <p className="text-2xl font-semibold">{value}</p>
+      <p className="text-xs text-slate-500">{label}</p>
+    </div>
   )
 }

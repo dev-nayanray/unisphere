@@ -19,10 +19,12 @@ class GradebookController extends Controller
     /** Teacher: whole class. Student: only their own row. */
     public function show(Request $request, CourseSection $section): JsonResponse
     {
-        $rows = $this->results->gradebook($section);
+        $staff = Gate::allows('viewResults', $section);
 
-        // Students only see their own row.
-        if (Gate::denies('viewResults', $section)) {
+        // Students see only their own row, counting only grades that were returned to them.
+        $rows = $this->results->gradebook($section, onlyReturned: ! $staff);
+
+        if (! $staff) {
             $rows = $rows->filter(fn ($row) => $row['student']->id === $request->user()->id)->values();
         }
 

@@ -26,7 +26,7 @@ class ResultSyncService
      *
      * @return Collection<int, array<string, mixed>>
      */
-    public function gradebook(CourseSection $section): Collection
+    public function gradebook(CourseSection $section, bool $onlyReturned = false): Collection
     {
         $scheme = $section->gradingScheme();
 
@@ -42,6 +42,7 @@ class ResultSyncService
             ->whereIn('assignment_id', $section->assignments->pluck('id'))
             ->whereIn('student_id', $studentIds)
             ->whereNotNull('marks')
+            ->when($onlyReturned, fn ($q) => $q->whereNotNull('returned_at'))
             ->get()
             ->groupBy('student_id');
 

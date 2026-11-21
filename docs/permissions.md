@@ -83,6 +83,15 @@ Two extra rules apply everywhere: deactivated accounts get 403 (`account_inactiv
 | `POST assignments/{assignment}/submit` |  |  |  |  |  | ✓ |
 | `POST assignments/{assignment}/grades` | ✓ | ✓ |  | ✓ |  |  |
 | `PATCH submissions/{submission}/grade` | ✓ | ✓ |  | ✓ |  |  |
+| `POST assignments/{assignment}/unsubmit` |  |  |  |  |  | ✓ |
+| `GET assignments/{assignment}/workspace` | ✓ | ✓ |  | ✓ |  |  |
+| `POST assignments/{assignment}/return` | ✓ | ✓ |  | ✓ |  |  |
+| `GET assignments/{assignment}/submissions.zip` | ✓ | ✓ |  | ✓ |  |  |
+| `GET assignments/{assignment}/marks.csv` | ✓ | ✓ |  | ✓ |  |  |
+| `POST assignments/{assignment}/marks-import` | ✓ | ✓ |  | ✓ |  |  |
+| `GET comment-bank` | ✓ | ✓ | ✓ | ✓ |  |  |
+| `POST comment-bank` | ✓ | ✓ | ✓ | ✓ |  |  |
+| `DELETE comment-bank/{feedback}` | ✓ |  |  | ✓ |  |  |
 | `GET quizzes/{quiz}` | ✓ | ✓ | ✓ | ✓ |  | ✓ |
 | `POST quizzes/{quiz}/start` |  |  |  |  |  | ✓ |
 | `POST quizzes/{quiz}/submit` |  |  |  |  |  | ✓ |
