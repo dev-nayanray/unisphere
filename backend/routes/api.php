@@ -3,12 +3,15 @@
 use App\Http\Controllers\Academic\AttendanceController;
 use App\Http\Controllers\Academic\RegistrationController;
 use App\Http\Controllers\Academic\ResultController;
+use App\Http\Controllers\Admin\AdmissionController;
 use App\Http\Controllers\Admin\CourseController;
 use App\Http\Controllers\Admin\CourseSectionController;
 use App\Http\Controllers\Admin\DepartmentController;
+use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\ProgramController;
 use App\Http\Controllers\Admin\SemesterController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Classroom\AssignmentController;
 use App\Http\Controllers\Classroom\ClassroomController;
@@ -39,6 +42,11 @@ Route::get('/', fn () => ['name' => 'UniSphere API', 'version' => '0.1.0']);
 Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:3,1');
 Route::post('/auth/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:5,1');
+
+// Public admission form
+Route::get('/public/programs', [ApplicationController::class, 'programs']);
+Route::post('/applications', [ApplicationController::class, 'store'])->middleware('throttle:5,1');
+Route::post('/applications/status', [ApplicationController::class, 'status'])->middleware('throttle:10,1');
 
 // Sandbox payment gateway callback (disabled when PAYMENT_SANDBOX=false)
 Route::get('/payments/{trxId}/sandbox-callback', [PaymentController::class, 'callback']);
@@ -157,6 +165,16 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
 
     Route::prefix('admin')->middleware('role:registrar')->group(function () {
         Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword']);
+
+        Route::get('import/{type}/template', [ImportController::class, 'template']);
+        Route::post('import/{type}/preview', [ImportController::class, 'preview']);
+        Route::post('import/{type}', [ImportController::class, 'import']);
+        Route::get('students/export', [ImportController::class, 'exportStudents']);
+
+        Route::get('applications', [AdmissionController::class, 'index']);
+        Route::get('applications/{application}', [AdmissionController::class, 'show']);
+        Route::get('applications/{application}/documents/{index}', [AdmissionController::class, 'document'])->whereNumber('index');
+        Route::post('applications/{application}/decide', [AdmissionController::class, 'decide']);
         Route::post('semesters/{semester}/make-current', [SemesterController::class, 'makeCurrent']);
         Route::apiResource('users', UserController::class);
         Route::apiResource('departments', DepartmentController::class)->except('index');

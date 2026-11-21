@@ -98,6 +98,13 @@ Every demo account's password is `password`. The login page also has one-click b
 
 The seeder creates the CSE department, 5 Fall 2026 courses, 3 teachers and 25 students. The students are enrolled in 4 classes and each has a tuition invoice.
 
+## Admissions and bulk import
+
+- **Online admission:** applicants fill in the public form at `/apply` (no login) and get a tracking code. They can check their status at `/apply/status`.
+- **Review:** the registrar opens **Admissions**, views the documents and accepts or rejects. Accepting creates the student account with the next student ID (`{year}-{term}-{program}-{seq}`, e.g. `2026-3-01-007`; set `STUDENT_ID_FORMAT` to change it) and emails the login details.
+- **Bulk import:** **Bulk Import** takes a CSV of students or faculty. Every row is checked first and nothing is saved unless the whole file is valid. Sample files are in `docs/samples/`. Temporary passwords are shown once, as a downloadable CSV.
+- **Export:** **Users → Export students** downloads the student list as a CSV that opens in Excel.
+
 ## How grades flow
 
 1. The teacher creates assignments and quizzes, each tagged with a category: `assignment`, `quiz`, `mid` or `final`.

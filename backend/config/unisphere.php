@@ -14,6 +14,12 @@ return [
     // Where the React app lives; used for links in emails (e.g. password reset).
     'frontend_url' => rtrim(env('FRONTEND_URL', 'http://localhost:5173'), '/'),
 
+    // Format for generated student IDs (see App\Services\StudentIdGenerator).
+    'student_id' => [
+        'format' => env('STUDENT_ID_FORMAT', '{year}-{term}-{program}-{seq}'),
+        'sequence_digits' => 3,
+    ],
+
     'min_attendance_percent' => 75,
 
     'max_credits_per_semester' => 21,

@@ -67,6 +67,10 @@ export default function Login() {
           </button>
         </form>
 
+        <p className="mt-4 text-center text-sm text-slate-500">
+          New student? <Link to="/apply" className="text-indigo-600">Apply for admission</Link>
+        </p>
+
         {import.meta.env.DEV && (
           <div className="mt-6 border-t border-slate-100 pt-4">
             <p className="mb-2 text-xs text-slate-400">Demo accounts (password: password)</p>

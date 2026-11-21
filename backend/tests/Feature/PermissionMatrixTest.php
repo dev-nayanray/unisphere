@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Application;
 use App\Models\Assignment;
 use App\Models\AttendanceSession;
 use App\Models\Complaint;
@@ -158,6 +159,14 @@ class PermissionMatrixTest extends TestCase
         // University administration (registrar + super admin)
         $m['POST admin/users/{user}/reset-password'] = self::ADMIN;
         $m['POST admin/semesters/{semester}/make-current'] = self::ADMIN;
+        $m['GET admin/import/{type}/template'] = self::ADMIN;
+        $m['POST admin/import/{type}/preview'] = self::ADMIN;
+        $m['POST admin/import/{type}'] = self::ADMIN;
+        $m['GET admin/students/export'] = self::ADMIN;
+        $m['GET admin/applications'] = self::ADMIN;
+        $m['GET admin/applications/{application}'] = self::ADMIN;
+        $m['GET admin/applications/{application}/documents/{index}'] = self::ADMIN;
+        $m['POST admin/applications/{application}/decide'] = self::ADMIN;
         foreach (['users' => 'user', 'courses' => 'course', 'sections' => 'section'] as $plural => $one) {
             $m["GET admin/{$plural}"] = self::ADMIN;
         }
@@ -231,6 +240,11 @@ class PermissionMatrixTest extends TestCase
         $notice = Notice::create([
             'author_id' => $this->users[self::REG]->id, 'title' => 'Hello', 'body' => 'All', 'audience' => 'all', 'published_at' => now(),
         ]);
+        $application = Application::create([
+            'program_id' => $program->id, 'name' => 'Applicant', 'email' => 'applicant@test.com', 'phone' => '01712345678',
+            'date_of_birth' => '2006-01-01', 'gender' => 'female', 'address' => 'Dhaka', 'ssc_gpa' => 5, 'ssc_year' => 2022,
+            'hsc_gpa' => 5, 'hsc_year' => 2024, 'documents' => [],
+        ]);
         $complaint = Complaint::create(['user_id' => $student->id, 'category' => 'it', 'subject' => 'Wi-Fi', 'description' => 'Down']);
         $other = User::factory()->create();
 
@@ -240,6 +254,7 @@ class PermissionMatrixTest extends TestCase
             'registration' => $registration->id, 'invoice' => $invoice->id, 'notice' => $notice->id,
             'complaint' => $complaint->id, 'user' => $other->id, 'department' => $dept->id, 'program' => $program->id,
             'semester' => $semester->id, 'course' => $course->id,
+            'application' => $application->id, 'type' => 'students', 'index' => 0,
         ];
 
         // Some routes need a body to reach their authorization check.

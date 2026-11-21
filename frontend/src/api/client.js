@@ -30,6 +30,31 @@ api.interceptors.response.use(
   }
 )
 
+/** Download a protected file (sends the auth token), e.g. downloadFile('/admin/students/export'). */
+export async function downloadFile(url, filename, params) {
+  const res = await api.get(url, { params, responseType: 'blob' })
+  const header = res.headers['content-disposition'] || ''
+  const name = filename || header.match(/filename="?([^";]+)"?/)?.[1] || 'download'
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(res.data)
+  link.download = name
+  link.click()
+  URL.revokeObjectURL(link.href)
+}
+
+/** Build and download a CSV in the browser from an array of objects. */
+export function downloadCsv(rows, filename) {
+  if (!rows.length) return
+  const keys = Object.keys(rows[0])
+  const escape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
+  const csv = [keys.join(','), ...rows.map((r) => keys.map((k) => escape(r[k])).join(','))].join('\n')
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv' }))
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(link.href)
+}
+
 /** Turn a Laravel error response into one readable message. */
 export function errorMessage(error) {
   const data = error?.response?.data

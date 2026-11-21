@@ -23,6 +23,9 @@ import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import AuthCard from './components/AuthCard'
 import PasswordForm from './components/PasswordForm'
+import Apply, { ApplicationStatus } from './pages/Apply'
+import Import from './pages/admin/Import'
+import Admissions from './pages/admin/Admissions'
 
 function RequireAuth({ children, roles }) {
   const { user, ready, hasRole, logout } = useAuth()
@@ -49,6 +52,8 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/apply" element={<Apply />} />
+      <Route path="/apply/status" element={<ApplicationStatus />} />
       <Route
         element={
           <RequireAuth>
@@ -73,6 +78,8 @@ export default function App() {
         <Route path="admin/users" element={<RequireAuth roles={['registrar']}><Users /></RequireAuth>} />
         <Route path="admin/academics" element={<RequireAuth roles={['registrar']}><Academics /></RequireAuth>} />
         <Route path="admin/offerings" element={<RequireAuth roles={['registrar']}><Offerings /></RequireAuth>} />
+        <Route path="admin/admissions" element={<RequireAuth roles={['registrar']}><Admissions /></RequireAuth>} />
+        <Route path="admin/import" element={<RequireAuth roles={['registrar']}><Import /></RequireAuth>} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

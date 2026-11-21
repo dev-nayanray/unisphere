@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { api, errorMessage } from '../../api/client'
+import { api, downloadFile, errorMessage } from '../../api/client'
 import { useOptions } from '../../api/useOptions'
 import CrudPage from '../../components/CrudPage'
 import { useToast } from '../../components/Toast'
@@ -63,7 +63,11 @@ export default function Users() {
 
   return (
     <div>
-      <PageHeader title="Users" subtitle="Students, faculty and staff accounts. New accounts get a temporary password." />
+      <PageHeader
+        title="Users"
+        subtitle="Students, faculty and staff accounts. New accounts get a temporary password."
+        actions={<button className="btn-ghost" onClick={() => downloadFile('/admin/students/export')}>Export students (CSV)</button>}
+      />
 
       <CrudPage
         title="user"

@@ -24,6 +24,8 @@ const NAV = [
   { to: '/admin/users', label: 'Users', icon: '☺', roles: ['registrar'] },
   { to: '/admin/academics', label: 'Academic Structure', icon: '▤', roles: ['registrar'] },
   { to: '/admin/offerings', label: 'Course Offering', icon: '⊞', roles: ['registrar'] },
+  { to: '/admin/admissions', label: 'Admissions', icon: '✦', roles: ['registrar'] },
+  { to: '/admin/import', label: 'Bulk Import', icon: '⇪', roles: ['registrar'] },
 ]
 
 export default function Layout() {
