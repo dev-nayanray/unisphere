@@ -75,9 +75,12 @@ class ClassroomTest extends TestCase
             ->assertOk();
 
         // 20/20 in the "assignment" category is worth its full weight (10 by default).
-        $this->actingAs($this->teacher)
+        $response = $this->actingAs($this->teacher)
             ->getJson("/api/classes/{$this->section->id}/gradebook")
-            ->assertOk()
-            ->assertJsonPath('rows.0.breakdown.assignment', 10.0);
+            ->assertOk();
+
+        // JSON drops the ".0" from whole floats, so compare loosely.
+        $this->assertEquals(10, $response->json('rows.0.breakdown.assignment'));
+        $this->assertSame('F', $response->json('rows.0.letter_grade')); // only 10/100 so far
     }
 }
