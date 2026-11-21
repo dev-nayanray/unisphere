@@ -57,7 +57,7 @@ class RegistrationController extends Controller
     {
         $user = $request->user();
         $semester = Semester::current()->firstOrFail();
-        abort_unless($semester->registration_open, 422, 'Course registration is closed.');
+        abort_unless($semester->acceptsRegistration(), 422, 'Course registration is closed.');
 
         $ids = $request->validate([
             'section_ids' => ['required', 'array', 'min:1'],
@@ -111,7 +111,7 @@ class RegistrationController extends Controller
     public function drop(Request $request, Registration $registration): JsonResponse
     {
         Gate::authorize('drop', $registration);
-        abort_unless($registration->section->semester->registration_open, 422, 'The add/drop period is over.');
+        abort_unless($registration->section->semester->acceptsRegistration(), 422, 'The add/drop period is over.');
 
         $registration->update(['status' => Registration::DROPPED]);
 

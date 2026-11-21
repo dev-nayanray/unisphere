@@ -14,7 +14,7 @@ class Student extends Model
     protected function casts(): array
     {
         return [
-            'admission_date' => 'date',
+            'admission_date' => 'date:Y-m-d',
             'cgpa' => 'decimal:2',
         ];
     }

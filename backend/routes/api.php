@@ -156,6 +156,8 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
     Route::get('/programs', [ProgramController::class, 'index']);
 
     Route::prefix('admin')->middleware('role:registrar')->group(function () {
+        Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword']);
+        Route::post('semesters/{semester}/make-current', [SemesterController::class, 'makeCurrent']);
         Route::apiResource('users', UserController::class);
         Route::apiResource('departments', DepartmentController::class)->except('index');
         Route::apiResource('programs', ProgramController::class)->except('index');

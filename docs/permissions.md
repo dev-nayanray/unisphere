@@ -121,6 +121,8 @@ Two extra rules apply everywhere: deactivated accounts get 403 (`account_inactiv
 
 | Route | Super Admin | Registrar | Dept. Head | Teacher | Accounts | Student |
 | --- | :-: | :-: | :-: | :-: | :-: | :-: |
+| `POST admin/users/{user}/reset-password` | ✓ | ✓ |  |  |  |  |
+| `POST admin/semesters/{semester}/make-current` | ✓ | ✓ |  |  |  |  |
 | `GET admin/users` | ✓ | ✓ |  |  |  |  |
 | `GET admin/courses` | ✓ | ✓ |  |  |  |  |
 | `GET admin/sections` | ✓ | ✓ |  |  |  |  |

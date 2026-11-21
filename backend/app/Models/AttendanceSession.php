@@ -15,7 +15,7 @@ class AttendanceSession extends Model
     protected function casts(): array
     {
         return [
-            'date' => 'date',
+            'date' => 'date:Y-m-d',
             'qr_expires_at' => 'datetime',
         ];
     }

@@ -156,6 +156,8 @@ class PermissionMatrixTest extends TestCase
         ];
 
         // University administration (registrar + super admin)
+        $m['POST admin/users/{user}/reset-password'] = self::ADMIN;
+        $m['POST admin/semesters/{semester}/make-current'] = self::ADMIN;
         foreach (['users' => 'user', 'courses' => 'course', 'sections' => 'section'] as $plural => $one) {
             $m["GET admin/{$plural}"] = self::ADMIN;
         }

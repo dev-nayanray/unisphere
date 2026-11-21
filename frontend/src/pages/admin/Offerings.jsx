@@ -1,107 +1,129 @@
 import { useState } from 'react'
-import { api, errorMessage } from '../../api/client'
 import { useApi } from '../../api/useApi'
-import { ErrorBox, Field, Loading, PageHeader } from '../../components/ui'
+import { useOptions } from '../../api/useOptions'
+import CrudPage from '../../components/CrudPage'
+import { Badge, PageHeader } from '../../components/ui'
 
-/** Course offering: open sections (= virtual classrooms) for a semester and assign teachers. */
+const DAYS = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+const CATEGORIES = { attendance: 'Attendance', assignment: 'Assignment', quiz: 'Class tests / quizzes', mid: 'Midterm', final: 'Final' }
+const DEFAULT_SCHEME = { attendance: 10, assignment: 10, quiz: 10, mid: 20, final: 50 }
+const COLORS = ['indigo', 'emerald', 'amber', 'rose', 'sky']
+
+/** Course offering: each section opened here becomes a virtual classroom. */
 export default function Offerings() {
   const semesters = useApi('/semesters')
   const current = semesters.data?.find((s) => s.is_current)
-  const [semesterId, setSemesterId] = useState('')
-  const activeSemester = semesterId || current?.id || ''
+  const [chosen, setChosen] = useState('')
+  const semesterId = chosen || current?.id || ''
 
-  const sections = useApi(activeSemester ? '/admin/sections' : null, { semester_id: activeSemester })
-  const courses = useApi('/admin/courses')
-  const teachers = useApi('/admin/users', { role: 'teacher', per_page: 200 })
-
-  const [form, setForm] = useState({ course_id: '', teacher_id: '', section: 'A', room: '', capacity: 40 })
-  const [error, setError] = useState(null)
-  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
-
-  async function add(e) {
-    e.preventDefault()
-    try {
-      await api.post('/admin/sections', { ...form, semester_id: activeSemester })
-      setError(null)
-      sections.reload()
-    } catch (err) {
-      setError(errorMessage(err))
-    }
-  }
-
-  async function toggleRegistration() {
-    const sem = semesters.data.find((s) => s.id === Number(activeSemester))
-    await api.put(`/admin/semesters/${sem.id}`, { registration_open: !sem.registration_open })
-    semesters.reload()
-  }
-
-  const sem = semesters.data?.find((s) => s.id === Number(activeSemester))
+  const courses = useOptions('/admin/courses', (c) => `${c.code} · ${c.title}`)
+  const teachers = useOptions('/admin/users', (u) => u.name, { role: 'teacher,department_head', per_page: 200 })
 
   return (
     <div>
       <PageHeader
         title="Course Offering"
-        subtitle="Each section you open becomes a virtual classroom"
+        subtitle="Open sections for a semester, assign teachers, rooms, the weekly schedule and grading weights"
         actions={
-          <>
-            <select className="input" value={activeSemester} onChange={(e) => setSemesterId(e.target.value)}>
-              {semesters.data?.map((s) => <option key={s.id} value={s.id}>{s.name}{s.is_current ? ' (current)' : ''}</option>)}
-            </select>
-            {sem && (
-              <button className="btn-ghost whitespace-nowrap" onClick={toggleRegistration}>
-                {sem.registration_open ? 'Close registration' : 'Open registration'}
-              </button>
-            )}
-          </>
+          <select className="input" value={semesterId} onChange={(e) => setChosen(e.target.value)}>
+            {semesters.data?.map((s) => <option key={s.id} value={s.id}>{s.name}{s.is_current ? ' (current)' : ''}</option>)}
+          </select>
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="card overflow-x-auto p-0 lg:col-span-2">
-          {sections.loading ? (
-            <Loading />
-          ) : (
-            <table className="table">
-              <thead><tr><th>Course</th><th>Section</th><th>Teacher</th><th>Room</th><th>Enrolled</th><th>Class code</th></tr></thead>
-              <tbody>
-                {sections.data?.map((s) => (
-                  <tr key={s.id}>
-                    <td><b>{s.course.code}</b> {s.course.title}</td>
-                    <td>{s.section}</td>
-                    <td>{s.teacher?.name || '—'}</td>
-                    <td>{s.room}</td>
-                    <td>{s.students_count}/{s.capacity}</td>
-                    <td className="font-mono text-xs">{s.join_code}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+      {semesterId && (
+        <CrudPage
+          key={semesterId}
+          title="section"
+          endpoint="/admin/sections"
+          params={{ semester_id: semesterId }}
+          searchPlaceholder="Search course"
+          defaults={{ semester_id: semesterId, section: 'A', capacity: 40, cover_color: 'indigo', schedule: [], grading_scheme: DEFAULT_SCHEME }}
+          fields={[
+            { name: 'course_id', label: 'Course', type: 'select', required: true, options: courses },
+            { name: 'teacher_id', label: 'Teacher', type: 'select', options: teachers, placeholder: 'Assign later' },
+            { name: 'section', label: 'Section', required: true, span: 1 },
+            { name: 'room', label: 'Room', span: 1 },
+            { name: 'capacity', label: 'Seats', type: 'number', span: 1 },
+            { name: 'cover_color', label: 'Class colour', type: 'select', span: 1, options: COLORS.map((c) => ({ value: c, label: c })) },
+            { name: 'schedule', label: 'Weekly schedule', render: ScheduleEditor },
+            { name: 'grading_scheme', label: 'Grading weights (must total 100)', render: SchemeEditor },
+          ]}
+          toForm={(s) => ({
+            semester_id: s.semester_id,
+            course_id: s.course_id,
+            teacher_id: s.teacher_id,
+            section: s.section,
+            room: s.room,
+            capacity: s.capacity,
+            cover_color: s.cover_color,
+            schedule: s.schedule || [],
+            grading_scheme: s.grading_scheme || DEFAULT_SCHEME,
+          })}
+          columns={[
+            { key: 'course_id', label: 'Course', sortable: true, render: (s) => <span><b>{s.course.code}</b> {s.course.title}</span> },
+            { key: 'section', label: 'Sec.', sortable: true },
+            { key: 'teacher', label: 'Teacher', render: (s) => s.teacher?.name || <Badge tone="amber">Unassigned</Badge> },
+            { key: 'room', label: 'Room', sortable: true },
+            { key: 'schedule', label: 'Schedule', render: (s) => <span className="text-xs">{(s.schedule || []).map((t) => `${t.day} ${t.start}–${t.end}`).join(', ') || '—'}</span> },
+            { key: 'capacity', label: 'Enrolled', sortable: true, render: (s) => `${s.students_count}/${s.capacity}` },
+            { key: 'join_code', label: 'Class code', render: (s) => <span className="font-mono text-xs">{s.join_code}</span> },
+          ]}
+          deleteMessage={(s) => `Delete ${s.course.code} section ${s.section}? Sections with registrations cannot be deleted.`}
+        />
+      )}
+    </div>
+  )
+}
 
-        <form onSubmit={add} className="card">
-          <h2 className="mb-3 font-semibold">Open a section</h2>
-          <ErrorBox message={error} />
-          <Field label="Course">
-            <select className="input" value={form.course_id} onChange={set('course_id')} required>
-              <option value="">Select…</option>
-              {courses.data?.map((c) => <option key={c.id} value={c.id}>{c.code} · {c.title}</option>)}
-            </select>
-          </Field>
-          <Field label="Teacher">
-            <select className="input" value={form.teacher_id} onChange={set('teacher_id')}>
-              <option value="">Assign later</option>
-              {teachers.data?.data?.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
-          </Field>
-          <div className="grid grid-cols-3 gap-2">
-            <Field label="Section"><input className="input" value={form.section} onChange={set('section')} required /></Field>
-            <Field label="Room"><input className="input" value={form.room} onChange={set('room')} /></Field>
-            <Field label="Seats"><input type="number" className="input" value={form.capacity} onChange={set('capacity')} /></Field>
-          </div>
-          <button className="btn-primary w-full" disabled={!activeSemester}>Create section</button>
-        </form>
+/** Rows of day + start + end time. */
+function ScheduleEditor({ value, set, error }) {
+  const rows = Array.isArray(value) ? value : []
+  const update = (i, key, v) => set(rows.map((r, j) => (j === i ? { ...r, [key]: v } : r)))
+
+  return (
+    <div className={`space-y-2 rounded-lg border p-3 ${error ? 'border-rose-300' : 'border-slate-200'}`}>
+      {rows.map((r, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <select className="input w-24" value={r.day} onChange={(e) => update(i, 'day', e.target.value)}>
+            {DAYS.map((d) => <option key={d}>{d}</option>)}
+          </select>
+          <input type="time" className="input" value={r.start} onChange={(e) => update(i, 'start', e.target.value)} required />
+          <span className="text-slate-400">to</span>
+          <input type="time" className="input" value={r.end} onChange={(e) => update(i, 'end', e.target.value)} required />
+          <button type="button" className="px-2 text-rose-500" onClick={() => set(rows.filter((_, j) => j !== i))} aria-label="Remove">✕</button>
+        </div>
+      ))}
+      <button type="button" className="text-sm text-indigo-600" onClick={() => set([...rows, { day: 'Sun', start: '09:00', end: '10:30' }])}>
+        + Add class time
+      </button>
+    </div>
+  )
+}
+
+/** One number per grading category, with a live total. */
+function SchemeEditor({ value, set, error }) {
+  const scheme = { ...DEFAULT_SCHEME, ...(value || {}) }
+  const total = Object.values(scheme).reduce((t, v) => t + Number(v || 0), 0)
+
+  return (
+    <div className={`rounded-lg border p-3 ${error ? 'border-rose-300' : 'border-slate-200'}`}>
+      <div className="grid grid-cols-5 gap-2">
+        {Object.entries(CATEGORIES).map(([key, label]) => (
+          <label key={key} className="text-xs text-slate-500">
+            {label}
+            <input
+              type="number"
+              min="0"
+              max="100"
+              className="input mt-1"
+              value={scheme[key]}
+              onChange={(e) => set({ ...scheme, [key]: Number(e.target.value) })}
+            />
+          </label>
+        ))}
       </div>
+      <p className={`mt-2 text-sm font-medium ${total === 100 ? 'text-emerald-600' : 'text-rose-600'}`}>Total: {total} / 100</p>
     </div>
   )
 }

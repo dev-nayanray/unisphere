@@ -20,7 +20,7 @@ class Invoice extends Model
             'amount' => 'decimal:2',
             'waiver' => 'decimal:2',
             'paid_amount' => 'decimal:2',
-            'due_date' => 'date',
+            'due_date' => 'date:Y-m-d',
         ];
     }
 
