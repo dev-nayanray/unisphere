@@ -86,6 +86,15 @@ Two extra rules apply everywhere: deactivated accounts get 403 (`account_inactiv
 | `PUT attendance-sessions/{session}/records` | ✓ | ✓ |  | ✓ |  |  |
 | `POST attendance/check-in` |  |  |  |  |  | ✓ |
 
+## Routine
+
+| Route | Super Admin | Registrar | Dept. Head | Teacher | Accounts | Student |
+| --- | :-: | :-: | :-: | :-: | :-: | :-: |
+| `GET routine/me` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `GET routine/me.ics` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `GET routine/rooms` | ✓ | ✓ | ✓ | ✓ |  |  |
+| `GET routine/rooms/{room}` | ✓ | ✓ | ✓ | ✓ |  |  |
+
 ## Registration & results
 
 | Route | Super Admin | Registrar | Dept. Head | Teacher | Accounts | Student |

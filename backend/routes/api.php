@@ -3,6 +3,7 @@
 use App\Http\Controllers\Academic\AttendanceController;
 use App\Http\Controllers\Academic\RegistrationController;
 use App\Http\Controllers\Academic\ResultController;
+use App\Http\Controllers\Academic\RoutineController;
 use App\Http\Controllers\Admin\AdmissionController;
 use App\Http\Controllers\Admin\CourseController;
 use App\Http\Controllers\Admin\CourseSectionController;
@@ -132,6 +133,14 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
     Route::get('/attendance-sessions/{session}', [AttendanceController::class, 'show']);
     Route::put('/attendance-sessions/{session}/records', [AttendanceController::class, 'mark']);
     Route::post('/attendance/check-in', [AttendanceController::class, 'checkIn'])->middleware('role:student');
+
+    // ---- Class routine --------------------------------------------------------
+    Route::get('/routine/me', [RoutineController::class, 'mine']);
+    Route::get('/routine/me.ics', [RoutineController::class, 'calendar']);
+    Route::middleware('role:registrar,department_head,teacher')->group(function () {
+        Route::get('/routine/rooms', [RoutineController::class, 'rooms']);
+        Route::get('/routine/rooms/{room}', [RoutineController::class, 'room']);
+    });
 
     // ---- Course registration & results -------------------------------------
     Route::middleware('role:student')->group(function () {

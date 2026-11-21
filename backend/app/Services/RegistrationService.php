@@ -9,6 +9,7 @@ use App\Models\Result;
 use App\Models\Semester;
 use App\Models\User;
 use App\Notifications\RegistrationUpdated;
+use App\Support\Schedule;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -230,15 +231,7 @@ class RegistrationService
     /** Two sections clash if any of their weekly slots overlap on the same day. */
     public function clashes(CourseSection $a, CourseSection $b): bool
     {
-        foreach ($a->schedule ?? [] as $x) {
-            foreach ($b->schedule ?? [] as $y) {
-                if ($x['day'] === $y['day'] && $x['start'] < $y['end'] && $y['start'] < $x['end']) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
+        return Schedule::firstOverlap($a->schedule, $b->schedule) !== null;
     }
 
     private function activeRegistrations(User $student, Semester $semester): Collection

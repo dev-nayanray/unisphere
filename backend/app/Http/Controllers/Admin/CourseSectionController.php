@@ -6,6 +6,7 @@ use App\Enums\Role;
 use App\Http\Controllers\Concerns\ListsRecords;
 use App\Http\Controllers\Controller;
 use App\Models\CourseSection;
+use App\Support\Schedule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -127,6 +128,54 @@ class CourseSectionController extends Controller
             throw ValidationException::withMessages(['section' => "Section {$label} of this course already exists this semester."]);
         }
 
+        $this->checkClashes($data, $section, $semesterId);
+
         return $data;
+    }
+
+    /**
+     * The same room or the same teacher can't have two classes at once.
+     * Lists every clash so the registrar can fix them in one go.
+     */
+    private function checkClashes(array $data, ?CourseSection $section, ?int $semesterId): void
+    {
+        $schedule = array_key_exists('schedule', $data) ? $data['schedule'] : $section?->schedule;
+        $room = array_key_exists('room', $data) ? $data['room'] : $section?->room;
+        $teacherId = array_key_exists('teacher_id', $data) ? $data['teacher_id'] : $section?->teacher_id;
+
+        if (empty($schedule) || (! $room && ! $teacherId)) {
+            return;
+        }
+
+        $others = CourseSection::query()
+            ->where('semester_id', $semesterId)
+            ->when($section, fn ($q) => $q->whereKeyNot($section->id))
+            ->where(fn ($q) => $q
+                ->when($room, fn ($q) => $q->orWhere('room', $room))
+                ->when($teacherId, fn ($q) => $q->orWhere('teacher_id', $teacherId)))
+            ->with(['course:id,code', 'teacher:id,name'])
+            ->get();
+
+        $clashes = [];
+        foreach ($others as $other) {
+            $overlap = Schedule::firstOverlap($schedule, $other->schedule);
+            if (! $overlap) {
+                continue;
+            }
+
+            [, $slot] = $overlap;
+            $when = "{$slot['day']} {$slot['start']}-{$slot['end']}";
+
+            if ($room && $other->room === $room) {
+                $clashes[] = "Room {$room} is used by {$other->course->code} ({$other->section}) on {$when}.";
+            }
+            if ($teacherId && (int) $other->teacher_id === (int) $teacherId) {
+                $clashes[] = "{$other->teacher->name} teaches {$other->course->code} ({$other->section}) on {$when}.";
+            }
+        }
+
+        if ($clashes) {
+            throw ValidationException::withMessages(['schedule' => $clashes]);
+        }
     }
 }

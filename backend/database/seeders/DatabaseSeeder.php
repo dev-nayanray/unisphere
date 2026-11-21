@@ -67,6 +67,14 @@ class DatabaseSeeder extends Seeder
         ]));
 
         $colors = ['indigo', 'emerald', 'amber', 'rose', 'sky'];
+        // A clash-free week: no teacher, room or student has two classes at once.
+        $schedules = [
+            [['day' => 'Sun', 'start' => '09:00', 'end' => '10:30'], ['day' => 'Tue', 'start' => '09:00', 'end' => '10:30']],
+            [['day' => 'Sun', 'start' => '10:30', 'end' => '12:00'], ['day' => 'Tue', 'start' => '10:30', 'end' => '12:00']],
+            [['day' => 'Mon', 'start' => '09:00', 'end' => '10:30'], ['day' => 'Wed', 'start' => '09:00', 'end' => '10:30']],
+            [['day' => 'Mon', 'start' => '14:00', 'end' => '17:00']],
+            [['day' => 'Thu', 'start' => '09:00', 'end' => '10:30'], ['day' => 'Sat', 'start' => '09:00', 'end' => '10:30']],
+        ];
         $sections = $courses->map(fn (Course $course, $i) => CourseSection::create([
             'course_id' => $course->id,
             'semester_id' => $semester->id,
@@ -75,7 +83,7 @@ class DatabaseSeeder extends Seeder
             'room' => '70'.($i + 1),
             'capacity' => 40,
             'cover_color' => $colors[$i],
-            'schedule' => [['day' => 'Sun', 'start' => '09:00', 'end' => '10:30'], ['day' => 'Tue', 'start' => '09:00', 'end' => '10:30']],
+            'schedule' => $schedules[$i],
         ]));
 
         // Students: one known demo account + 24 generated, all enrolled in the first 4 courses.

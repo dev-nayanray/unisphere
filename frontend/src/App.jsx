@@ -26,6 +26,7 @@ import PasswordForm from './components/PasswordForm'
 import Apply, { ApplicationStatus } from './pages/Apply'
 import Import from './pages/admin/Import'
 import Admissions from './pages/admin/Admissions'
+import Routine from './pages/Routine'
 
 function RequireAuth({ children, roles }) {
   const { user, ready, hasRole, logout } = useAuth()
@@ -68,6 +69,7 @@ export default function App() {
         <Route path="notices" element={<Notices />} />
         <Route path="complaints" element={<Complaints />} />
         <Route path="profile" element={<Profile />} />
+        <Route path="routine" element={<Routine />} />
 
         <Route path="registration" element={<RequireAuth roles={['student']}><Registration /></RequireAuth>} />
         <Route path="attendance" element={<RequireAuth roles={['student']}><Attendance /></RequireAuth>} />

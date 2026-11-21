@@ -56,6 +56,27 @@ export default function Dashboard() {
         )}
       </div>
 
+      {['student', 'teacher', 'department_head'].includes(user.role) && (
+        <div className="card mt-6">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-semibold">Today's classes</h2>
+            <Link to="/routine" className="text-xs text-indigo-600">Full routine</Link>
+          </div>
+          {data?.today?.length ? (
+            <ul className="flex flex-wrap gap-3">
+              {data.today.map((c, i) => (
+                <li key={`${c.section_id}-${i}`} className="rounded-lg border border-slate-200 px-4 py-2 text-sm">
+                  <p className="font-medium">{c.start}–{c.end} · {c.code}</p>
+                  <p className="text-xs text-slate-500">{c.title} · {c.room ? `Room ${c.room}` : 'Room TBA'}</p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-slate-500">No classes today.</p>
+          )}
+        </div>
+      )}
+
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <div className="card lg:col-span-2">
           {user.role === 'student' && (

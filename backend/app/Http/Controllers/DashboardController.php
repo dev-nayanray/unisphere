@@ -14,6 +14,7 @@ use App\Models\Registration;
 use App\Models\Semester;
 use App\Models\Student;
 use App\Models\User;
+use App\Services\RoutineService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -34,6 +35,9 @@ class DashboardController extends Controller
 
         return response()->json([
             'semester' => $semester,
+            'today' => in_array($user->role, [Role::Student, Role::Teacher, Role::DepartmentHead], true)
+                ? app(RoutineService::class)->today($user)
+                : [],
             'notices' => Notice::visibleTo($user)->latest('published_at')->limit(5)->get(['id', 'title', 'is_urgent', 'published_at']),
             ...$data,
         ]);

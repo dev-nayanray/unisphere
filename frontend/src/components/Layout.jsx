@@ -13,6 +13,7 @@ const NAV = [
   { to: '/notices', label: 'Notices', icon: '✉', roles: ['*'] },
   { to: '/profile', label: 'My Profile', icon: '☺', roles: ['*'] },
   { section: 'Academic' },
+  { to: '/routine', label: 'Class Routine', icon: '▥', roles: ['student', 'teacher', 'department_head', 'registrar'] },
   { to: '/registration', label: 'Course Registration', icon: '✎', roles: ['student'] },
   { to: '/approvals', label: 'Registration Approvals', icon: '✓', roles: ['teacher', 'department_head', 'registrar'] },
   { to: '/attendance', label: 'Attendance Check-in', icon: '◉', roles: ['student'] },

@@ -133,6 +133,12 @@ class PermissionMatrixTest extends TestCase
             'PUT attendance-sessions/{session}/records' => self::MANAGE,
             'POST attendance/check-in' => [self::STU],
 
+            // Routine
+            'GET routine/me' => self::ALL,
+            'GET routine/me.ics' => self::ALL,
+            'GET routine/rooms' => self::STAFF,
+            'GET routine/rooms/{room}' => self::STAFF,
+
             // Registration & results
             'GET registration/offered' => [self::SA, self::STU],
             'GET registration/mine' => [self::SA, self::STU],
@@ -256,7 +262,7 @@ class PermissionMatrixTest extends TestCase
             'registration' => $registration->id, 'invoice' => $invoice->id, 'notice' => $notice->id,
             'complaint' => $complaint->id, 'user' => $other->id, 'department' => $dept->id, 'program' => $program->id,
             'semester' => $semester->id, 'course' => $course->id,
-            'application' => $application->id, 'type' => 'students', 'index' => 0,
+            'application' => $application->id, 'type' => 'students', 'index' => 0, 'room' => '701',
         ];
 
         // Some routes need a body to reach their authorization check.
