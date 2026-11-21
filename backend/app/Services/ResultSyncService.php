@@ -32,7 +32,7 @@ class ResultSyncService
 
         $section->load([
             'registrations' => fn ($q) => $q->where('status', Registration::APPROVED)->with('student:id,name,email'),
-            'assignments:id,course_section_id,title,category,max_marks',
+            'assignments:id,course_section_id,title,category,max_marks,due_at,late_policy,late_penalty_percent',
             'quizzes.questions:id,quiz_id,marks',
         ]);
 
@@ -73,7 +73,8 @@ class ResultSyncService
             foreach ($submissions->get($registration->student_id, collect()) as $s) {
                 $a = $assignmentMax[$s->assignment_id];
                 if ((float) $a->max_marks > 0) {
-                    $percentages[$a->category][] = (float) $s->marks / (float) $a->max_marks * 100;
+                    // Late penalties are applied here, so the official result matches the policy.
+                    $percentages[$a->category][] = $a->effectiveMarks($s) / (float) $a->max_marks * 100;
                 }
             }
 

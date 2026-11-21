@@ -123,13 +123,16 @@ class DatabaseSeeder extends Seeder
             'published_at' => now(),
             'notified_at' => now(),
         ]);
+        $week1 = $first->topics()->create(['name' => 'Week 1: Introduction', 'position' => 0]);
+        $week2 = $first->topics()->create(['name' => 'Week 2: Requirements', 'position' => 1]);
         $first->materials()->create([
-            'author_id' => $first->teacher_id, 'title' => 'Course outline', 'topic' => 'Week 1',
+            'author_id' => $first->teacher_id, 'title' => 'Course outline', 'topic_id' => $week1->id,
             'type' => 'link', 'url' => 'https://example.com/course-outline.pdf',
         ]);
         Assignment::create([
             'course_section_id' => $first->id, 'author_id' => $first->teacher_id,
-            'title' => 'SRS document for your semester project', 'topic' => 'Week 2',
+            'title' => 'SRS document for your semester project', 'topic_id' => $week2->id,
+            'late_policy' => 'penalty', 'late_penalty_percent' => 10,
             'instructions' => 'Write an IEEE 830 style SRS for your team project.',
             'category' => 'assignment', 'max_marks' => 20,
             'due_at' => now()->addWeek(), 'published_at' => now(),

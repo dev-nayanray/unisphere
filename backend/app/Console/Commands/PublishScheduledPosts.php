@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Http\Controllers\Classroom\AssignmentController;
+use App\Models\Assignment;
 use App\Models\Post;
 use App\Notifications\NewStreamPost;
 use Illuminate\Console\Command;
@@ -15,7 +17,7 @@ class PublishScheduledPosts extends Command
 {
     protected $signature = 'unisphere:publish-scheduled-posts';
 
-    protected $description = 'Notify classes about scheduled posts whose time has come';
+    protected $description = 'Notify classes about scheduled posts and assignments whose time has come';
 
     public function handle(): int
     {
@@ -29,7 +31,13 @@ class PublishScheduledPosts extends Command
             $post->update(['notified_at' => now()]);
         }
 
-        $this->info("Published {$posts->count()} scheduled post(s).");
+        // Scheduled assignments: notify the assigned students and post to the stream.
+        $assignments = Assignment::published()->whereNull('notified_at')->with(['section', 'author'])->get();
+        foreach ($assignments as $assignment) {
+            AssignmentController::announceIfDue($assignment);
+        }
+
+        $this->info("Published {$posts->count()} scheduled post(s) and {$assignments->count()} scheduled assignment(s).");
 
         return self::SUCCESS;
     }

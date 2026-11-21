@@ -21,6 +21,7 @@ use App\Http\Controllers\Classroom\MaterialController;
 use App\Http\Controllers\Classroom\QuizController;
 use App\Http\Controllers\Classroom\StreamController;
 use App\Http\Controllers\Classroom\SubmissionController;
+use App\Http\Controllers\Classroom\TopicController;
 use App\Http\Controllers\ComplaintController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Finance\InvoiceController;
@@ -53,6 +54,9 @@ Route::post('/applications/status', [ApplicationController::class, 'status'])->m
 Route::get('/files/post-attachments/{attachment}', [StreamController::class, 'attachment'])
     ->middleware('signed')
     ->name('post-attachments.show');
+Route::get('/files/assignment-attachments/{attachment}', [AssignmentController::class, 'attachment'])
+    ->middleware('signed')
+    ->name('assignment-attachments.show');
 
 // Sandbox payment gateway callback (disabled when PAYMENT_SANDBOX=false)
 Route::get('/payments/{trxId}/sandbox-callback', [PaymentController::class, 'callback']);
@@ -99,6 +103,10 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
         Route::get('/materials', [MaterialController::class, 'index']);
         Route::post('/materials', [MaterialController::class, 'store']);
 
+        Route::get('/topics', [TopicController::class, 'index']);
+        Route::post('/topics', [TopicController::class, 'store']);
+        Route::put('/topics/order', [TopicController::class, 'reorder']);
+
         Route::get('/assignments', [AssignmentController::class, 'index']);
         Route::post('/assignments', [AssignmentController::class, 'store']);
 
@@ -125,6 +133,10 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
     Route::delete('/comments/{comment}', [StreamController::class, 'destroyComment']);
 
     Route::delete('/materials/{material}', [MaterialController::class, 'destroy']);
+
+    Route::patch('/topics/{topic}', [TopicController::class, 'update']);
+    Route::delete('/topics/{topic}', [TopicController::class, 'destroy']);
+    Route::delete('/assignment-attachments/{attachment}', [AssignmentController::class, 'destroyAttachment']);
 
     Route::get('/assignments/{assignment}', [AssignmentController::class, 'show']);
     Route::patch('/assignments/{assignment}', [AssignmentController::class, 'update']);

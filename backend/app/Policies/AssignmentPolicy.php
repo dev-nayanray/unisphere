@@ -16,7 +16,12 @@ class AssignmentPolicy
             return true;
         }
 
-        return $assignment->published_at !== null && $section->canView($user);
+        if (! $assignment->isPublished() || ! $section->canView($user)) {
+            return false;
+        }
+
+        // Students only see work assigned to them; staff members see everything published.
+        return ! $user->isStudent() || $assignment->isAssignedTo($user);
     }
 
     public function update(User $user, Assignment $assignment): bool
@@ -38,6 +43,8 @@ class AssignmentPolicy
     /** Turn in work: enrolled students, published work only. */
     public function submit(User $user, Assignment $assignment): bool
     {
-        return $assignment->published_at !== null && $assignment->section->isStudent($user);
+        return $assignment->isPublished()
+            && $assignment->section->isStudent($user)
+            && $assignment->isAssignedTo($user);
     }
 }

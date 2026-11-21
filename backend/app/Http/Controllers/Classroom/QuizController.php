@@ -40,6 +40,7 @@ class QuizController extends Controller
             'title' => ['required', 'string', 'max:200'],
             'instructions' => ['nullable', 'string'],
             'category' => ['sometimes', Rule::in(['quiz', 'mid', 'final'])],
+            'topic_id' => ['nullable', Rule::exists('topics', 'id')->where('course_section_id', $section->id)],
             'duration_minutes' => ['required', 'integer', 'min:1', 'max:300'],
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', 'after:starts_at'],

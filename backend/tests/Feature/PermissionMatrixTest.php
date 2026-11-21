@@ -111,6 +111,12 @@ class PermissionMatrixTest extends TestCase
             'GET classes/{section}/results' => self::STAFF,
             'POST classes/{section}/results/publish' => [self::SA, self::REG, self::HEAD],
 
+            'GET classes/{section}/topics' => self::MEMBERS,
+            'POST classes/{section}/topics' => self::MANAGE,
+            'PUT classes/{section}/topics/order' => self::MANAGE,
+            'PATCH topics/{topic}' => self::MANAGE,
+            'DELETE topics/{topic}' => self::MANAGE,
+            'DELETE assignment-attachments/{attachment}' => self::MANAGE,
             'PATCH posts/{post}' => [self::SA, self::TEA], // only the author (teacher) edits
             'PUT classes/{section}/stream-settings' => self::MANAGE,
             'GET classes/{section}/upcoming' => self::MEMBERS,
@@ -231,12 +237,14 @@ class PermissionMatrixTest extends TestCase
 
         $post = Post::create(['course_section_id' => $section->id, 'author_id' => $teacher->id, 'body' => 'Welcome', 'published_at' => now()]);
         $comment = $post->comments()->create(['author_id' => $student->id, 'body' => 'Thanks']);
+        $topic = $section->topics()->create(['name' => 'Week 1']);
         $material = Material::create([
             'course_section_id' => $section->id, 'author_id' => $teacher->id, 'title' => 'Outline', 'type' => 'link', 'url' => 'https://example.com',
         ]);
         $assignment = Assignment::create([
             'course_section_id' => $section->id, 'author_id' => $teacher->id, 'title' => 'Lab 1', 'max_marks' => 10, 'published_at' => now(),
         ]);
+        $attachment = $assignment->attachments()->create(['path' => 'missing.pdf', 'original_name' => 'q.pdf', 'mime' => 'application/pdf', 'size' => 10]);
         $submission = Submission::create([
             'assignment_id' => $assignment->id, 'student_id' => $student->id, 'content' => 'Answer', 'submitted_at' => now(),
         ]);
@@ -262,7 +270,7 @@ class PermissionMatrixTest extends TestCase
         $other = User::factory()->create();
 
         $this->ids = [
-            'section' => $section->id, 'post' => $post->id, 'comment' => $comment->id, 'material' => $material->id, 'assignment' => $assignment->id,
+            'section' => $section->id, 'post' => $post->id, 'comment' => $comment->id, 'topic' => $topic->id, 'attachment' => $attachment->id, 'material' => $material->id, 'assignment' => $assignment->id,
             'submission' => $submission->id, 'quiz' => $quiz->id, 'attempt' => $attempt->id, 'session' => $session->id,
             'registration' => $registration->id, 'invoice' => $invoice->id, 'notice' => $notice->id,
             'complaint' => $complaint->id, 'user' => $other->id, 'department' => $dept->id, 'program' => $program->id,

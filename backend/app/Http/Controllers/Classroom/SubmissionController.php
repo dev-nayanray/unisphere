@@ -16,7 +16,7 @@ class SubmissionController extends Controller
     {
         $user = $request->user();
         Gate::authorize('submit', $assignment);
-        abort_if($assignment->isPastDue() && ! $assignment->allow_late, 422, 'The due date has passed.');
+        abort_if($assignment->isPastDue() && ! $assignment->acceptsLateWork(), 422, 'The due date has passed and late work is not accepted.');
 
         $data = $request->validate([
             'content' => ['nullable', 'string', 'required_without:file'],
@@ -40,7 +40,13 @@ class SubmissionController extends Controller
             ]
         );
 
-        return response()->json($submission, 201);
+        $penalty = $assignment->latePenaltyPercent($submission);
+
+        return response()->json([
+            ...$submission->toArray(),
+            'late_penalty_percent' => $penalty,
+            'message' => $penalty ? "Turned in late: {$penalty}% will be taken off your marks." : 'Turned in.',
+        ], 201);
     }
 
     /** Teacher grades a submission. Grades flow into the gradebook automatically. */
@@ -49,18 +55,63 @@ class SubmissionController extends Controller
         $assignment = $submission->assignment;
         Gate::authorize('grade', $submission);
 
+        $assignment->loadMissing('criteria.levels');
+        $hasRubric = $assignment->criteria->isNotEmpty();
+
         $data = $request->validate([
-            'marks' => ['required', 'numeric', 'min:0', 'max:'.$assignment->max_marks],
+            // With a rubric, marks are optional: they are the sum of the chosen levels.
+            'marks' => [$hasRubric ? 'nullable' : 'required', 'numeric', 'min:0', 'max:'.$assignment->max_marks],
+            'rubric_scores' => [$hasRubric && ! $request->filled('marks') ? 'required' : 'nullable', 'array'],
             'feedback' => ['nullable', 'string', 'max:5000'],
         ]);
 
+        if ($hasRubric && ! empty($data['rubric_scores'])) {
+            $data['marks'] = $this->rubricTotal($assignment, $data['rubric_scores']);
+        }
+
         $submission->update([
-            ...$data,
+            'marks' => $data['marks'],
+            'rubric_scores' => $data['rubric_scores'] ?? null,
+            'feedback' => $data['feedback'] ?? $submission->feedback,
             'graded_at' => now(),
             'graded_by' => $request->user()->id,
         ]);
 
-        return response()->json($submission);
+        return response()->json([
+            ...$submission->fresh()->toArray(),
+            'late_penalty_percent' => $assignment->latePenaltyPercent($submission),
+            'effective_marks' => $assignment->effectiveMarks($submission),
+        ]);
+    }
+
+    /**
+     * Sum the points of the chosen level for every criterion.
+     * Each criterion needs exactly one level that belongs to it.
+     *
+     * @param  array<int|string, int|string>  $scores  criterion id => level id
+     */
+    private function rubricTotal(Assignment $assignment, array $scores): float
+    {
+        $total = 0.0;
+        $errors = [];
+
+        foreach ($assignment->criteria as $criterion) {
+            $levelId = $scores[$criterion->id] ?? null;
+            $level = $criterion->levels->firstWhere('id', (int) $levelId);
+
+            if (! $level) {
+                $errors["rubric_scores.{$criterion->id}"] = "Choose a level for \"{$criterion->title}\".";
+
+                continue;
+            }
+            $total += (float) $level->points;
+        }
+
+        if ($errors) {
+            throw \Illuminate\Validation\ValidationException::withMessages($errors);
+        }
+
+        return round($total, 2);
     }
 
     /** Teacher records marks for a student who submitted on paper (e.g. mid/final exam). */

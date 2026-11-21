@@ -10,13 +10,14 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class MaterialController extends Controller
 {
     public function index(CourseSection $section): JsonResponse
     {
         return response()->json(
-            $section->materials()->with('author:id,name')->latest()->get()
+            $section->materials()->with(['author:id,name', 'topic:id,name'])->latest()->get()
         );
     }
 
@@ -27,7 +28,7 @@ class MaterialController extends Controller
         $data = $request->validate([
             'title' => ['required', 'string', 'max:200'],
             'description' => ['nullable', 'string'],
-            'topic' => ['nullable', 'string', 'max:80'],
+            'topic_id' => ['nullable', Rule::exists('topics', 'id')->where('course_section_id', $section->id)],
             'type' => ['required', 'in:file,link,video'],
             'url' => ['required_unless:type,file', 'nullable', 'url'],
             'file' => ['required_if:type,file', 'nullable', 'file', 'max:20480'], // 20 MB

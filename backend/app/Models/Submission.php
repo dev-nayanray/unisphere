@@ -9,7 +9,7 @@ class Submission extends Model
 {
     protected $fillable = [
         'assignment_id', 'student_id', 'content', 'file_path', 'submitted_at', 'is_late',
-        'marks', 'feedback', 'graded_at', 'graded_by',
+        'marks', 'feedback', 'graded_at', 'graded_by', 'rubric_scores',
     ];
 
     protected function casts(): array
@@ -19,6 +19,7 @@ class Submission extends Model
             'graded_at' => 'datetime',
             'is_late' => 'boolean',
             'marks' => 'decimal:2',
+            'rubric_scores' => 'array',
         ];
     }
 

@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Quiz extends Model
 {
     protected $fillable = [
-        'course_section_id', 'author_id', 'title', 'instructions', 'category', 'duration_minutes',
+        'course_section_id', 'author_id', 'topic_id', 'title', 'instructions', 'category', 'duration_minutes',
         'starts_at', 'ends_at', 'shuffle_questions', 'published_at',
     ];
 
@@ -26,6 +26,11 @@ class Quiz extends Model
     public function section(): BelongsTo
     {
         return $this->belongsTo(CourseSection::class, 'course_section_id');
+    }
+
+    public function topic(): BelongsTo
+    {
+        return $this->belongsTo(Topic::class);
     }
 
     public function questions(): HasMany

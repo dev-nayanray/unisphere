@@ -76,6 +76,11 @@ class CourseSection extends Model
             ->withTimestamps();
     }
 
+    public function topics(): HasMany
+    {
+        return $this->hasMany(Topic::class)->orderBy('position');
+    }
+
     public function posts(): HasMany
     {
         return $this->hasMany(Post::class);

@@ -187,8 +187,9 @@ class StreamController extends Controller
     /** "Upcoming" sidebar: the next three due assignments and quizzes. */
     public function upcoming(CourseSection $section): JsonResponse
     {
+        $user = request()->user();
         $assignments = Assignment::where('course_section_id', $section->id)
-            ->whereNotNull('published_at')
+            ->when($user->isStudent(), fn ($q) => $q->visibleToStudent($user), fn ($q) => $q->published())
             ->where('due_at', '>=', now())
             ->orderBy('due_at')
             ->limit(3)

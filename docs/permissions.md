@@ -65,6 +65,12 @@ Two extra rules apply everywhere: deactivated accounts get 403 (`account_inactiv
 | `GET classes/{section}/attendance/report` | ✓ | ✓ | ✓ | ✓ |  | ✓ |
 | `GET classes/{section}/results` | ✓ | ✓ | ✓ | ✓ |  |  |
 | `POST classes/{section}/results/publish` | ✓ | ✓ | ✓ |  |  |  |
+| `GET classes/{section}/topics` | ✓ | ✓ | ✓ | ✓ |  | ✓ |
+| `POST classes/{section}/topics` | ✓ | ✓ |  | ✓ |  |  |
+| `PUT classes/{section}/topics/order` | ✓ | ✓ |  | ✓ |  |  |
+| `PATCH topics/{topic}` | ✓ | ✓ |  | ✓ |  |  |
+| `DELETE topics/{topic}` | ✓ | ✓ |  | ✓ |  |  |
+| `DELETE assignment-attachments/{attachment}` | ✓ | ✓ |  | ✓ |  |  |
 | `PATCH posts/{post}` | ✓ |  |  | ✓ |  |  |
 | `DELETE posts/{post}` | ✓ | ✓ |  | ✓ |  |  |
 | `POST posts/{post}/comments` | ✓ | ✓ | ✓ | ✓ |  | ✓ |

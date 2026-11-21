@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Storage;
 class Material extends Model
 {
     protected $fillable = [
-        'course_section_id', 'author_id', 'title', 'description', 'topic', 'type', 'url', 'file_path',
+        'course_section_id', 'author_id', 'topic_id', 'title', 'description', 'type', 'url', 'file_path',
     ];
 
     protected $appends = ['file_url'];
@@ -17,6 +17,11 @@ class Material extends Model
     public function section(): BelongsTo
     {
         return $this->belongsTo(CourseSection::class, 'course_section_id');
+    }
+
+    public function topic(): BelongsTo
+    {
+        return $this->belongsTo(Topic::class);
     }
 
     public function author(): BelongsTo

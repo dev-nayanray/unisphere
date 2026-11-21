@@ -49,7 +49,7 @@ class DashboardController extends Controller
 
         $pending = Assignment::query()
             ->whereIn('course_section_id', $sectionIds)
-            ->whereNotNull('published_at')
+            ->visibleToStudent($user)
             ->whereDoesntHave('submissions', fn ($q) => $q->where('student_id', $user->id))
             ->with('section.course:id,code,title')
             ->orderBy('due_at')
