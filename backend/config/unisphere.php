@@ -11,6 +11,9 @@
 
 return [
 
+    // Where the React app lives; used for links in emails (e.g. password reset).
+    'frontend_url' => rtrim(env('FRONTEND_URL', 'http://localhost:5173'), '/'),
+
     'min_attendance_percent' => 75,
 
     'max_credits_per_semester' => 21,

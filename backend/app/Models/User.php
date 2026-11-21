@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -19,18 +20,33 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name', 'email', 'phone', 'role', 'avatar', 'is_active', 'password',
+        'must_change_password', 'password_changed_at',
     ];
 
     protected $hidden = ['password', 'remember_token'];
+
+    protected $appends = ['avatar_url'];
 
     protected function casts(): array
     {
         return [
             'role' => Role::class,
             'is_active' => 'boolean',
+            'must_change_password' => 'boolean',
             'email_verified_at' => 'datetime',
+            'password_changed_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function getAvatarUrlAttribute(): ?string
+    {
+        return $this->avatar ? Storage::disk('public')->url($this->avatar) : null;
+    }
+
+    public function loginActivities(): HasMany
+    {
+        return $this->hasMany(LoginActivity::class)->latest('created_at');
     }
 
     public function student(): HasOne

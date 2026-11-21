@@ -37,16 +37,25 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', fn () => ['name' => 'UniSphere API', 'version' => '0.1.0']);
 
 Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:3,1');
+Route::post('/auth/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:5,1');
 
 // Sandbox payment gateway callback (disabled when PAYMENT_SANDBOX=false)
 Route::get('/payments/{trxId}/sandbox-callback', [PaymentController::class, 'callback']);
 
+// ---- Account (allowed even while a temporary password must be changed) ----
 Route::middleware('auth:sanctum')->group(function () {
-
-    // ---- Account -----------------------------------------------------------
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::put('/auth/password', [AuthController::class, 'updatePassword']);
+});
+
+Route::middleware(['auth:sanctum', 'password.changed'])->group(function () {
+
+    // ---- Profile ------------------------------------------------------------
+    Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
+    Route::post('/auth/avatar', [AuthController::class, 'updateAvatar']);
+    Route::get('/auth/activity', [AuthController::class, 'activity']);
     Route::get('/dashboard', DashboardController::class);
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead']);

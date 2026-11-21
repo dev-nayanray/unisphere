@@ -38,7 +38,7 @@ export function AuthProvider({ children }) {
   const hasRole = (...roles) => Boolean(user) && (user.role === 'super_admin' || roles.includes(user.role))
 
   return (
-    <AuthContext.Provider value={{ user, ready, login, logout, hasRole }}>
+    <AuthContext.Provider value={{ user, setUser, ready, login, logout, hasRole }}>
       {children}
     </AuthContext.Provider>
   )

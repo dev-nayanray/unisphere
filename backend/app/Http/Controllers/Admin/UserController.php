@@ -38,6 +38,8 @@ class UserController extends Controller
                 'phone' => $data['phone'] ?? null,
                 'role' => $data['role'],
                 'password' => $data['password'] ?? 'password',
+                // Admin-created accounts get a temporary password the user must replace.
+                'must_change_password' => true,
             ]);
             $this->syncProfile($user, $data);
 

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Avatar } from './ui'
 import { useAuth } from '../context/AuthContext'
 import ErrorBoundary from './ErrorBoundary'
 import NotificationBell from './NotificationBell'
@@ -10,6 +11,7 @@ const NAV = [
   { to: '/', label: 'Dashboard', icon: '▦', roles: ['*'] },
   { to: '/classes', label: 'My Classes', icon: '◧', roles: ['student', 'teacher', 'department_head', 'registrar'] },
   { to: '/notices', label: 'Notices', icon: '✉', roles: ['*'] },
+  { to: '/profile', label: 'My Profile', icon: '☺', roles: ['*'] },
   { section: 'Academic' },
   { to: '/registration', label: 'Course Registration', icon: '✎', roles: ['student'] },
   { to: '/approvals', label: 'Registration Approvals', icon: '✓', roles: ['teacher', 'department_head', 'registrar'] },
@@ -89,10 +91,13 @@ export default function Layout() {
           <div className="hidden md:block" />
           <div className="flex items-center gap-4">
             <NotificationBell />
-            <div className="text-right">
-              <p className="text-sm font-medium text-slate-900">{user?.name}</p>
-              <p className="text-xs text-slate-500">{user?.role_label}</p>
-            </div>
+            <Link to="/profile" className="flex items-center gap-3 rounded-lg px-2 py-1 hover:bg-slate-50">
+              <div className="hidden text-right sm:block">
+                <p className="text-sm font-medium text-slate-900">{user?.name}</p>
+                <p className="text-xs text-slate-500">{user?.role_label}</p>
+              </div>
+              <Avatar user={user} />
+            </Link>
             <button onClick={handleLogout} className="btn-ghost py-1.5">
               Log out
             </button>

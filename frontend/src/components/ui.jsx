@@ -83,7 +83,19 @@ export function Field({ label, children }) {
   )
 }
 
-export const formatDate = (value, withTime = false) =>
+export function Avatar({ user, size = 'sm' }) {
+  const sizes = { sm: 'h-9 w-9 text-sm', lg: 'h-24 w-24 text-3xl' }
+  if (user?.avatar_url) {
+    return <img src={user.avatar_url} alt="" className={`${sizes[size]} mx-auto rounded-full object-cover`} />
+  }
+  return (
+    <div className={`${sizes[size]} mx-auto flex items-center justify-center rounded-full bg-indigo-100 font-semibold text-indigo-700`}>
+      {user?.name?.[0]}
+    </div>
+  )
+}
+
+export const formatDate =(value, withTime = false) =>
   value
     ? new Date(value).toLocaleString('en-GB', {
         day: 'numeric', month: 'short', year: 'numeric',
