@@ -7,6 +7,7 @@ use App\Models\Invoice;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\DB;
 
 class InvoiceController extends Controller
@@ -58,9 +59,9 @@ class InvoiceController extends Controller
         return response()->json(['message' => count($studentIds).' invoice(s) created.'], 201);
     }
 
-    public function show(Request $request, Invoice $invoice): JsonResponse
+    public function show(Invoice $invoice): JsonResponse
     {
-        abort_if($request->user()->isStudent() && $invoice->student_id !== $request->user()->id, 403);
+        Gate::authorize('view', $invoice);
 
         return response()->json($invoice->load(['student:id,name,email', 'semester:id,name', 'payments']));
     }

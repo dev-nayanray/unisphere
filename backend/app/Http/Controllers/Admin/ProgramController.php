@@ -40,9 +40,7 @@ class ProgramController extends Controller
 
     public function destroy(Program $program): JsonResponse
     {
-        $program->delete();
-
-        return response()->json(['message' => 'Program deleted.']);
+        return $this->deleteOrExplain($program, 'program');
     }
 
     private function validated(Request $request, ?Program $program = null): array

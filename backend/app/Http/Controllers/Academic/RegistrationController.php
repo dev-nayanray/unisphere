@@ -9,6 +9,7 @@ use App\Models\Result;
 use App\Models\Semester;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\DB;
 
 class RegistrationController extends Controller
@@ -109,7 +110,7 @@ class RegistrationController extends Controller
 
     public function drop(Request $request, Registration $registration): JsonResponse
     {
-        abort_unless($registration->student_id === $request->user()->id, 403);
+        Gate::authorize('drop', $registration);
         abort_unless($registration->section->semester->registration_open, 422, 'The add/drop period is over.');
 
         $registration->update(['status' => Registration::DROPPED]);
@@ -140,15 +141,7 @@ class RegistrationController extends Controller
     {
         $data = $request->validate(['status' => ['required', 'in:approved,rejected']]);
 
-        $user = $request->user();
-        $registration->load(['student.student', 'section.course.program.department']);
-        abort_unless(
-            $user->isAdmin()
-                || $registration->student->student?->advisor_id === $user->id
-                || $registration->section->course->program->department->head_id === $user->id,
-            403,
-            'Only the advisor, department head or registrar can decide this request.'
-        );
+        Gate::authorize('decide', $registration);
 
         $registration->update([...$data, 'approved_by' => $request->user()->id]);
 

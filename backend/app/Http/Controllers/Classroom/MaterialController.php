@@ -7,6 +7,7 @@ use App\Models\CourseSection;
 use App\Models\Material;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 
 class MaterialController extends Controller
@@ -43,7 +44,7 @@ class MaterialController extends Controller
 
     public function destroy(Material $material): JsonResponse
     {
-        $this->ensureCanManage($material->section);
+        Gate::authorize('delete', $material);
 
         if ($material->file_path) {
             Storage::disk('public')->delete($material->file_path);

@@ -41,9 +41,7 @@ class SemesterController extends Controller
 
     public function destroy(Semester $semester): JsonResponse
     {
-        $semester->delete();
-
-        return response()->json(['message' => 'Semester deleted.']);
+        return $this->deleteOrExplain($semester, 'semester');
     }
 
     private function validated(Request $request, ?Semester $semester = null): array

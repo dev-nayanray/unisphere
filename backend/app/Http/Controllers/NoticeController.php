@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Notifications\NoticePublished;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Notification;
 
 class NoticeController extends Controller
@@ -52,16 +53,16 @@ class NoticeController extends Controller
         return response()->json($notice, 201);
     }
 
-    public function show(Request $request, Notice $notice): JsonResponse
+    public function show(Notice $notice): JsonResponse
     {
-        abort_unless(Notice::visibleTo($request->user())->whereKey($notice->id)->exists(), 404);
+        Gate::authorize('view', $notice);
 
         return response()->json($notice->load(['author:id,name', 'department:id,code,name']));
     }
 
-    public function destroy(Request $request, Notice $notice): JsonResponse
+    public function destroy(Notice $notice): JsonResponse
     {
-        abort_unless($request->user()->isAdmin() || $notice->author_id === $request->user()->id, 403);
+        Gate::authorize('delete', $notice);
         $notice->delete();
 
         return response()->json(['message' => 'Notice deleted.']);

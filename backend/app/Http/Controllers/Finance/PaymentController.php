@@ -7,6 +7,7 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 
 /**
@@ -23,7 +24,7 @@ class PaymentController extends Controller
 {
     public function initiate(Request $request, Invoice $invoice): JsonResponse
     {
-        abort_unless($invoice->student_id === $request->user()->id, 403);
+        Gate::authorize('pay', $invoice);
         abort_if($invoice->status === 'paid', 422, 'This invoice is already paid.');
 
         $data = $request->validate([

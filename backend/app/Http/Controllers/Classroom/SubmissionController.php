@@ -7,6 +7,7 @@ use App\Models\Assignment;
 use App\Models\Submission;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class SubmissionController extends Controller
 {
@@ -14,8 +15,7 @@ class SubmissionController extends Controller
     public function store(Request $request, Assignment $assignment): JsonResponse
     {
         $user = $request->user();
-        abort_unless($assignment->section->isStudent($user), 403, 'Only enrolled students can submit.');
-        abort_if($assignment->published_at === null, 404);
+        Gate::authorize('submit', $assignment);
         abort_if($assignment->isPastDue() && ! $assignment->allow_late, 422, 'The due date has passed.');
 
         $data = $request->validate([
@@ -47,7 +47,7 @@ class SubmissionController extends Controller
     public function grade(Request $request, Submission $submission): JsonResponse
     {
         $assignment = $submission->assignment;
-        $this->ensureCanManage($assignment->section);
+        Gate::authorize('grade', $submission);
 
         $data = $request->validate([
             'marks' => ['required', 'numeric', 'min:0', 'max:'.$assignment->max_marks],
@@ -66,7 +66,7 @@ class SubmissionController extends Controller
     /** Teacher records marks for a student who submitted on paper (e.g. mid/final exam). */
     public function gradeOffline(Request $request, Assignment $assignment): JsonResponse
     {
-        $this->ensureCanManage($assignment->section);
+        Gate::authorize('grade', $assignment);
 
         $data = $request->validate([
             'grades' => ['required', 'array'],

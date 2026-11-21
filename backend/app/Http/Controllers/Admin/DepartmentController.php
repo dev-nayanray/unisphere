@@ -36,9 +36,7 @@ class DepartmentController extends Controller
 
     public function destroy(Department $department): JsonResponse
     {
-        $department->delete();
-
-        return response()->json(['message' => 'Department deleted.']);
+        return $this->deleteOrExplain($department, 'department');
     }
 
     private function validated(Request $request, ?Department $department = null): array

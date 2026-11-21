@@ -44,13 +44,13 @@ Route::post('/auth/reset-password', [AuthController::class, 'resetPassword'])->m
 Route::get('/payments/{trxId}/sandbox-callback', [PaymentController::class, 'callback']);
 
 // ---- Account (allowed even while a temporary password must be changed) ----
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::put('/auth/password', [AuthController::class, 'updatePassword']);
 });
 
-Route::middleware(['auth:sanctum', 'password.changed'])->group(function () {
+Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(function () {
 
     // ---- Profile ------------------------------------------------------------
     Route::put('/auth/profile', [AuthController::class, 'updateProfile']);

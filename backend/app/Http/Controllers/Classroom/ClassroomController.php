@@ -8,6 +8,7 @@ use App\Models\Registration;
 use App\Models\Semester;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class ClassroomController extends Controller
 {
@@ -40,9 +41,9 @@ class ClassroomController extends Controller
         return response()->json([
             ...$section->toArray(),
             'grading_scheme' => $section->gradingScheme(),
-            'can_manage' => $section->canManage($request->user()),
+            'can_manage' => Gate::allows('manage', $section),
             // Only the teacher needs to see the join code.
-            'join_code' => $section->canManage($request->user()) ? $section->join_code : null,
+            'join_code' => Gate::allows('manage', $section) ? $section->join_code : null,
         ]);
     }
 

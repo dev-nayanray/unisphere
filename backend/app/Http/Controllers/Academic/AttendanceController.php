@@ -8,6 +8,7 @@ use App\Models\AttendanceSession;
 use App\Models\CourseSection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -68,7 +69,7 @@ class AttendanceController extends Controller
 
     public function show(AttendanceSession $session): JsonResponse
     {
-        $this->ensureCanManage($session->section);
+        Gate::authorize('view', $session);
 
         return response()->json([
             'session' => $session,
@@ -79,7 +80,7 @@ class AttendanceController extends Controller
 
     public function mark(Request $request, AttendanceSession $session): JsonResponse
     {
-        $this->ensureCanManage($session->section);
+        Gate::authorize('update', $session);
 
         $data = $request->validate([
             'records' => ['required', 'array'],
@@ -99,7 +100,7 @@ class AttendanceController extends Controller
         $session = AttendanceSession::where('qr_token', $token)->firstOrFail();
 
         abort_unless($session->qrIsValid(), 422, 'This QR code has expired.');
-        abort_unless($session->section->isStudent($request->user()), 403, 'You are not enrolled in this class.');
+        Gate::authorize('attend', $session->section);
 
         AttendanceRecord::updateOrCreate(
             ['attendance_session_id' => $session->id, 'student_id' => $request->user()->id],
@@ -124,7 +125,7 @@ class AttendanceController extends Controller
             ->pluck('c', 'student_id');
 
         $students = $section->students()
-            ->when(! $section->canManage($user), fn ($q) => $q->where('users.id', $user->id))
+            ->when(Gate::denies('manage', $section), fn ($q) => $q->where('users.id', $user->id))
             ->get(['users.id', 'users.name']);
 
         $min = config('unisphere.min_attendance_percent');

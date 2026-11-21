@@ -42,9 +42,7 @@ class CourseSectionController extends Controller
 
     public function destroy(CourseSection $section): JsonResponse
     {
-        $section->delete();
-
-        return response()->json(['message' => 'Section deleted.']);
+        return $this->deleteOrExplain($section, 'section');
     }
 
     private function validated(Request $request, ?CourseSection $section = null): array

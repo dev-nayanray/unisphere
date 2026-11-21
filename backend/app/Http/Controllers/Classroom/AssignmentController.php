@@ -8,6 +8,7 @@ use App\Models\CourseSection;
 use App\Notifications\NewClassworkPosted;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\Rule;
 
@@ -17,7 +18,7 @@ class AssignmentController extends Controller
     public function index(Request $request, CourseSection $section): JsonResponse
     {
         $user = $request->user();
-        $manage = $section->canManage($user);
+        $manage = Gate::allows('manage', $section);
 
         $assignments = $section->assignments()
             ->when(! $manage, fn ($q) => $q->whereNotNull('published_at'))
@@ -57,15 +58,14 @@ class AssignmentController extends Controller
 
     public function show(Request $request, Assignment $assignment): JsonResponse
     {
+        Gate::authorize('view', $assignment);
         $section = $assignment->section;
-        $this->ensureCanView($section);
         $user = $request->user();
 
-        if ($section->canManage($user)) {
+        if (Gate::allows('update', $assignment)) {
             $assignment->load(['submissions.student:id,name,email']);
             $assignment->setAttribute('roster', $section->students()->get(['users.id', 'users.name']));
         } else {
-            abort_if($assignment->published_at === null, 404);
             $assignment->load(['submissions' => fn ($q) => $q->where('student_id', $user->id)]);
         }
 
@@ -74,7 +74,7 @@ class AssignmentController extends Controller
 
     public function update(Request $request, Assignment $assignment): JsonResponse
     {
-        $this->ensureCanManage($assignment->section);
+        Gate::authorize('update', $assignment);
 
         $data = $this->validated($request, partial: true);
         unset($data['attachment'], $data['publish']);
@@ -88,7 +88,7 @@ class AssignmentController extends Controller
 
     public function destroy(Assignment $assignment): JsonResponse
     {
-        $this->ensureCanManage($assignment->section);
+        Gate::authorize('delete', $assignment);
         $assignment->delete();
 
         return response()->json(['message' => 'Assignment deleted.']);

@@ -41,9 +41,7 @@ class CourseController extends Controller
 
     public function destroy(Course $course): JsonResponse
     {
-        $course->delete();
-
-        return response()->json(['message' => 'Course deleted.']);
+        return $this->deleteOrExplain($course, 'course');
     }
 
     private function validated(Request $request, ?Course $course = null): array

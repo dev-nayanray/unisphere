@@ -3,18 +3,43 @@
 namespace App\Http\Controllers;
 
 use App\Models\CourseSection;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\QueryException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Gate;
 
+/**
+ * Authorization lives in app/Policies. Controllers call Gate::authorize();
+ * these two helpers are shorthands for the classroom checks used everywhere.
+ */
 abstract class Controller
 {
-    /** Abort unless the signed-in user can open this classroom. */
+    /** Teacher, enrolled students, the department head or an admin. */
     protected function ensureCanView(CourseSection $section): void
     {
-        abort_unless($section->canView(request()->user()), 403, 'You are not a member of this class.');
+        Gate::authorize('view', $section);
     }
 
-    /** Abort unless the signed-in user teaches this classroom (or is an admin). */
+    /** The class teacher or an admin. */
     protected function ensureCanManage(CourseSection $section): void
     {
-        abort_unless($section->canManage(request()->user()), 403, 'Only the class teacher can do this.');
+        Gate::authorize('manage', $section);
+    }
+
+    /**
+     * Delete a record, turning a foreign-key failure (the record is still
+     * used elsewhere) into a clear 422 instead of a 500.
+     */
+    protected function deleteOrExplain(Model $model, string $label): JsonResponse
+    {
+        try {
+            $model->delete();
+        } catch (QueryException) {
+            return response()->json([
+                'message' => "This {$label} is still in use and cannot be deleted. Remove or move the records that use it first.",
+            ], 422);
+        }
+
+        return response()->json(['message' => ucfirst($label).' deleted.']);
     }
 }

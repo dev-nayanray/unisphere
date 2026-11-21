@@ -8,6 +8,7 @@ use App\Models\Registration;
 use App\Services\ResultSyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class GradebookController extends Controller
 {
@@ -20,7 +21,8 @@ class GradebookController extends Controller
     {
         $rows = $this->results->gradebook($section);
 
-        if (! $section->canManage($request->user()) && ! $request->user()->hasRole('department_head')) {
+        // Students only see their own row.
+        if (Gate::denies('viewResults', $section)) {
             $rows = $rows->filter(fn ($row) => $row['student']->id === $request->user()->id)->values();
         }
 

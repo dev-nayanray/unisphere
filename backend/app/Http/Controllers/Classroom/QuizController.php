@@ -8,6 +8,7 @@ use App\Models\Quiz;
 use App\Models\QuizAttempt;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -16,7 +17,7 @@ class QuizController extends Controller
     public function index(Request $request, CourseSection $section): JsonResponse
     {
         $user = $request->user();
-        $manage = $section->canManage($user);
+        $manage = Gate::allows('manage', $section);
 
         return response()->json(
             $section->quizzes()
@@ -71,10 +72,9 @@ class QuizController extends Controller
     /** Teachers see the answer key; students only see questions while the quiz is open. */
     public function show(Request $request, Quiz $quiz): JsonResponse
     {
-        $section = $quiz->section;
-        $this->ensureCanView($section);
+        Gate::authorize('view', $quiz);
 
-        if ($section->canManage($request->user())) {
+        if (Gate::allows('update', $quiz)) {
             $quiz->load(['questions' => fn ($q) => $q->orderBy('position')]);
             $quiz->questions->each->makeVisible('correct_option');
             $quiz->load('attempts.student:id,name');
@@ -82,7 +82,6 @@ class QuizController extends Controller
             return response()->json($quiz);
         }
 
-        abort_unless($quiz->isOpen(), 403, 'This quiz is not open.');
         $questions = $quiz->questions()->get();
 
         return response()->json([
@@ -94,7 +93,8 @@ class QuizController extends Controller
 
     public function start(Request $request, Quiz $quiz): JsonResponse
     {
-        abort_unless($quiz->section->isStudent($request->user()) && $quiz->isOpen(), 403);
+        Gate::authorize('take', $quiz);
+        abort_unless($quiz->isOpen(), 422, 'This quiz is not open right now.');
 
         $attempt = QuizAttempt::firstOrCreate(
             ['quiz_id' => $quiz->id, 'student_id' => $request->user()->id],
@@ -107,6 +107,8 @@ class QuizController extends Controller
     /** Submit answers. MCQs are graded instantly; short answers wait for the teacher. */
     public function submit(Request $request, Quiz $quiz): JsonResponse
     {
+        Gate::authorize('take', $quiz);
+
         $attempt = QuizAttempt::where('quiz_id', $quiz->id)
             ->where('student_id', $request->user()->id)
             ->firstOrFail();
@@ -149,7 +151,7 @@ class QuizController extends Controller
     public function gradeAttempt(Request $request, QuizAttempt $attempt): JsonResponse
     {
         $quiz = $attempt->quiz;
-        $this->ensureCanManage($quiz->section);
+        Gate::authorize('grade', $attempt);
 
         $attempt->update($request->validate([
             'score' => ['required', 'numeric', 'min:0', 'max:'.$quiz->maxMarks()],

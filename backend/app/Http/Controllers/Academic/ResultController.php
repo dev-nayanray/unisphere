@@ -9,6 +9,7 @@ use App\Models\Result;
 use App\Models\Student;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class ResultController extends Controller
 {
@@ -57,8 +58,7 @@ class ResultController extends Controller
     /** Teacher / department head: results for one section, including drafts. */
     public function section(CourseSection $section): JsonResponse
     {
-        $this->ensureCanView($section);
-        abort_if(request()->user()->isStudent(), 403);
+        Gate::authorize('viewResults', $section);
 
         return response()->json(
             Result::whereHas('registration', fn ($q) => $q->where('course_section_id', $section->id))
@@ -70,7 +70,7 @@ class ResultController extends Controller
     /** Department head or registrar publishes the results and CGPAs update. */
     public function publish(Request $request, CourseSection $section): JsonResponse
     {
-        $this->ensureCanView($section);
+        Gate::authorize('publishResults', $section);
 
         $count = Result::whereHas('registration', fn ($q) => $q->where('course_section_id', $section->id))
             ->whereNull('published_at')

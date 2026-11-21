@@ -7,6 +7,7 @@ use App\Models\CourseSection;
 use App\Models\Post;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 /** The class stream: announcements and comments. */
 class StreamController extends Controller
@@ -30,7 +31,7 @@ class StreamController extends Controller
         ]);
 
         // Students may post too (like Google Classroom), but only teachers can pin.
-        if (! $section->canManage($request->user())) {
+        if (Gate::denies('manage', $section)) {
             $data['is_pinned'] = false;
         }
 
@@ -41,7 +42,7 @@ class StreamController extends Controller
 
     public function update(Request $request, Post $post): JsonResponse
     {
-        $this->authorizeOwnerOrTeacher($request, $post);
+        Gate::authorize('update', $post);
 
         $post->update($request->validate([
             'body' => ['sometimes', 'string', 'max:5000'],
@@ -51,9 +52,9 @@ class StreamController extends Controller
         return response()->json($post);
     }
 
-    public function destroy(Request $request, Post $post): JsonResponse
+    public function destroy(Post $post): JsonResponse
     {
-        $this->authorizeOwnerOrTeacher($request, $post);
+        Gate::authorize('delete', $post);
         $post->delete();
 
         return response()->json(['message' => 'Post deleted.']);
@@ -61,7 +62,7 @@ class StreamController extends Controller
 
     public function comment(Request $request, Post $post): JsonResponse
     {
-        $this->ensureCanView($post->section);
+        Gate::authorize('comment', $post);
 
         $comment = $post->comments()->create([
             'author_id' => $request->user()->id,
@@ -69,13 +70,5 @@ class StreamController extends Controller
         ]);
 
         return response()->json($comment->load('author:id,name,avatar'), 201);
-    }
-
-    private function authorizeOwnerOrTeacher(Request $request, Post $post): void
-    {
-        abort_unless(
-            $post->author_id === $request->user()->id || $post->section->canManage($request->user()),
-            403
-        );
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Complaint;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 
 /** Help desk tickets: Pending -> In progress -> Resolved. */
@@ -39,7 +40,7 @@ class ComplaintController extends Controller
 
     public function show(Request $request, Complaint $complaint): JsonResponse
     {
-        $this->authorizeView($request, $complaint);
+        Gate::authorize('view', $complaint);
 
         return response()->json($complaint->load(['user:id,name,email', 'assignee:id,name']));
     }
@@ -47,8 +48,7 @@ class ComplaintController extends Controller
     /** Admins assign and resolve; the assignee can update the status. */
     public function update(Request $request, Complaint $complaint): JsonResponse
     {
-        $user = $request->user();
-        abort_unless($user->isAdmin() || $complaint->assigned_to === $user->id, 403);
+        Gate::authorize('update', $complaint);
 
         $data = $request->validate([
             'status' => ['sometimes', Rule::in(Complaint::STATUSES)],
@@ -63,14 +63,5 @@ class ComplaintController extends Controller
         $complaint->update($data);
 
         return response()->json($complaint);
-    }
-
-    private function authorizeView(Request $request, Complaint $complaint): void
-    {
-        $user = $request->user();
-        abort_unless(
-            $user->isAdmin() || $complaint->user_id === $user->id || $complaint->assigned_to === $user->id,
-            403
-        );
     }
 }
