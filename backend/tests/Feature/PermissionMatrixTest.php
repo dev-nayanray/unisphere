@@ -141,6 +141,8 @@ class PermissionMatrixTest extends TestCase
             'GET results/mine' => [self::SA, self::STU],
             'GET registration/pending' => self::STAFF,
             'PATCH registration/{registration}/decide' => self::STAFF, // teacher is the advisor
+            'PATCH registration/decide-many' => self::STAFF,
+            'POST registration/force' => self::ADMIN,
 
             // Fees
             'GET invoices' => [self::SA, self::ACC, self::STU],

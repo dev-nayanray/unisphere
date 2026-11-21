@@ -64,7 +64,7 @@ class ClassroomController extends Controller
         $data = $request->validate(['code' => ['required', 'string', 'max:8']]);
         $section = CourseSection::where('join_code', strtolower($data['code']))->firstOrFail();
 
-        abort_if($section->students()->count() >= $section->capacity, 422, 'This class is full.');
+        abort_if($section->registrations()->holdingSeat()->count() >= $section->capacity, 422, 'This class is full. Register from Course Registration to join the waitlist.');
 
         $registration = Registration::firstOrCreate(
             ['course_section_id' => $section->id, 'student_id' => $request->user()->id],

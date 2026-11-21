@@ -42,7 +42,7 @@ export function Badge({ children, tone = 'slate' }) {
 export const statusTone = (status) =>
   ({
     approved: 'emerald', paid: 'emerald', resolved: 'emerald', present: 'emerald', success: 'emerald',
-    pending: 'amber', partial: 'amber', in_progress: 'indigo', late: 'amber',
+    pending: 'amber', partial: 'amber', in_progress: 'indigo', late: 'amber', waitlisted: 'amber',
     rejected: 'rose', unpaid: 'rose', absent: 'rose', failed: 'rose', dropped: 'slate',
   })[status] || 'slate'
 

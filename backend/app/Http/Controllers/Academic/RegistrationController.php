@@ -5,157 +5,174 @@ namespace App\Http\Controllers\Academic;
 use App\Http\Controllers\Controller;
 use App\Models\CourseSection;
 use App\Models\Registration;
-use App\Models\Result;
 use App\Models\Semester;
+use App\Models\User;
+use App\Services\RegistrationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class RegistrationController extends Controller
 {
-    /** Sections offered this semester, with seats left and the student's status. */
+    public function __construct(private readonly RegistrationService $registrations)
+    {
+    }
+
+    /** Sections offered this semester, with seats left and the student's own status. */
     public function offered(Request $request): JsonResponse
     {
         $semester = Semester::current()->firstOrFail();
-        $user = $request->user();
+        $user = $request->user()->loadMissing('student');
 
         $sections = CourseSection::query()
             ->where('semester_id', $semester->id)
             ->when($user->student, fn ($q) => $q->whereHas('course', fn ($q) => $q->where('program_id', $user->student->program_id)))
             ->with(['course.prerequisite:id,code,title', 'teacher:id,name'])
-            ->withCount('students')
+            ->withCount(['registrations as seats_taken' => fn ($q) => $q->holdingSeat()])
             ->with(['registrations' => fn ($q) => $q->where('student_id', $user->id)])
             ->get()
+            ->sortBy('course.code')
+            ->values()
             ->map(fn (CourseSection $s) => [
                 ...$s->only(['id', 'section', 'room', 'schedule', 'capacity']),
                 'course' => $s->course,
                 'teacher' => $s->teacher,
-                'seats_left' => max(0, $s->capacity - $s->students_count),
+                'seats_left' => max(0, $s->capacity - $s->seats_taken),
                 'my_status' => $s->registrations->first()?->status,
+                'my_note' => $s->registrations->first()?->note,
             ]);
 
         return response()->json([
             'semester' => $semester,
+            'open' => $semester->acceptsRegistration(),
+            'min_credits' => config('unisphere.min_credits_per_semester'),
             'max_credits' => config('unisphere.max_credits_per_semester'),
             'sections' => $sections,
         ]);
     }
 
+    /** This semester's registrations, with waitlist position and the advisor's note. */
     public function mine(Request $request): JsonResponse
     {
-        return response()->json(
-            Registration::where('student_id', $request->user()->id)
-                ->whereHas('section.semester', fn ($q) => $q->where('is_current', true))
-                ->with(['section.course:id,code,title,credit', 'section.teacher:id,name'])
-                ->get()
-        );
+        $rows = Registration::where('student_id', $request->user()->id)
+            ->whereHas('section.semester', fn ($q) => $q->where('is_current', true))
+            ->with(['section.course:id,code,title,credit', 'section.teacher:id,name', 'approver:id,name'])
+            ->orderBy('id')
+            ->get()
+            ->map(fn (Registration $r) => [...$r->toArray(), 'waitlist_position' => $this->registrations->waitlistPosition($r)]);
+
+        return response()->json($rows);
     }
 
-    /** Register for one or more sections, with prerequisite, capacity and credit-limit checks. */
     public function store(Request $request): JsonResponse
     {
-        $user = $request->user();
         $semester = Semester::current()->firstOrFail();
-        abort_unless($semester->acceptsRegistration(), 422, 'Course registration is closed.');
 
         $ids = $request->validate([
             'section_ids' => ['required', 'array', 'min:1'],
-            'section_ids.*' => ['integer', 'exists:course_sections,id'],
+            'section_ids.*' => ['integer', 'distinct', 'exists:course_sections,id'],
         ])['section_ids'];
 
-        $sections = CourseSection::with('course')->withCount('students')->whereIn('id', $ids)->get();
+        $sections = CourseSection::with(['course.prerequisite:id,code'])->whereIn('id', $ids)->get();
+        $result = $this->registrations->register($request->user(), $semester, $sections);
 
-        $currentCredits = Registration::where('student_id', $user->id)
-            ->whereIn('status', [Registration::PENDING, Registration::APPROVED])
-            ->whereHas('section', fn ($q) => $q->where('semester_id', $semester->id))
-            ->with('section.course:id,credit')
-            ->get()
-            ->sum(fn ($r) => (float) $r->section->course->credit);
-
-        $errors = [];
-        foreach ($sections as $section) {
-            $code = $section->course->code;
-            if ($section->semester_id !== $semester->id) {
-                $errors[] = "{$code}: not offered this semester.";
-            }
-            if ($section->students_count >= $section->capacity) {
-                $errors[] = "{$code}: section {$section->section} is full.";
-            }
-            if ($section->course->prerequisite_id && ! $this->hasPassed($user->id, $section->course->prerequisite_id)) {
-                $errors[] = "{$code}: prerequisite not completed.";
-            }
+        if ($result['errors']) {
+            return response()->json(['message' => 'Some courses could not be registered.', 'errors' => $result['errors']], 422);
         }
 
-        $newCredits = $sections->sum(fn ($s) => (float) $s->course->credit);
-        if ($currentCredits + $newCredits > config('unisphere.max_credits_per_semester')) {
-            $errors[] = 'Credit limit exceeded ('.config('unisphere.max_credits_per_semester').' max).';
+        $message = $result['registered']->count().' course(s) sent for advisor approval.';
+        if ($result['waitlisted']->isNotEmpty()) {
+            $message .= ' '.$result['waitlisted']->count().' full course(s) added to the waitlist.';
         }
 
-        if ($errors) {
-            return response()->json(['message' => 'Registration failed.', 'errors' => ['section_ids' => $errors]], 422);
-        }
-
-        DB::transaction(function () use ($sections, $user) {
-            foreach ($sections as $section) {
-                Registration::firstOrCreate(
-                    ['course_section_id' => $section->id, 'student_id' => $user->id],
-                    ['status' => Registration::PENDING]
-                );
-            }
-        });
-
-        return response()->json(['message' => 'Registration submitted for advisor approval.'], 201);
+        return response()->json(['message' => $message], 201);
     }
 
-    public function drop(Request $request, Registration $registration): JsonResponse
+    public function drop(Registration $registration): JsonResponse
     {
         Gate::authorize('drop', $registration);
         abort_unless($registration->section->semester->acceptsRegistration(), 422, 'The add/drop period is over.');
+        abort_if($registration->status === Registration::DROPPED, 422, 'This course is already dropped.');
 
-        $registration->update(['status' => Registration::DROPPED]);
+        $this->registrations->drop($registration);
 
         return response()->json(['message' => 'Course dropped.']);
     }
 
-    /** Advisors, department heads and the registrar see requests waiting for approval. */
+    /** Requests waiting for the signed-in advisor / head / registrar. */
     public function pending(Request $request): JsonResponse
     {
         $user = $request->user();
 
         $query = Registration::where('status', Registration::PENDING)
-            ->with(['student:id,name,email', 'student.student:id,user_id,student_id,cgpa', 'section.course:id,code,title,credit'])
-            ->latest();
+            ->with(['student:id,name,email', 'student.student:id,user_id,student_id,cgpa,advisor_id', 'section.course:id,code,title,credit'])
+            ->orderBy('created_at');
 
         if (! $user->isAdmin()) {
-            // Advisor sees own advisees; department head sees their department.
             $query->where(fn ($q) => $q
                 ->whereHas('student.student', fn ($q) => $q->where('advisor_id', $user->id))
                 ->orWhereHas('section.course.program.department', fn ($q) => $q->where('head_id', $user->id)));
         }
 
-        return response()->json($query->paginate(30));
+        return response()->json($query->paginate(50));
     }
 
     public function decide(Request $request, Registration $registration): JsonResponse
     {
-        $data = $request->validate(['status' => ['required', 'in:approved,rejected']]);
-
+        $data = $this->decision($request);
         Gate::authorize('decide', $registration);
+        abort_unless($registration->status === Registration::PENDING, 422, 'Only pending requests can be decided.');
 
-        $registration->update([...$data, 'approved_by' => $request->user()->id]);
+        $this->registrations->decide($registration, $data['status'], $data['note'] ?? null, $request->user());
 
-        return response()->json($registration);
+        return response()->json($registration->fresh(['section.course:id,code']));
     }
 
-    private function hasPassed(int $studentId, int $courseId): bool
+    /** Approve or reject many requests at once (e.g. a whole student's semester). */
+    public function decideMany(Request $request): JsonResponse
     {
-        return Result::query()
-            ->whereNotNull('published_at')
-            ->where('grade_point', '>', 0)
-            ->whereHas('registration', fn ($q) => $q
-                ->where('student_id', $studentId)
-                ->whereHas('section', fn ($q) => $q->where('course_id', $courseId)))
-            ->exists();
+        $data = $this->decision($request) + $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:200'],
+            'ids.*' => ['integer', 'exists:registrations,id'],
+        ]);
+
+        $registrations = Registration::whereIn('id', $data['ids'])->where('status', Registration::PENDING)->get();
+        foreach ($registrations as $registration) {
+            Gate::authorize('decide', $registration);
+        }
+
+        foreach ($registrations as $registration) {
+            $this->registrations->decide($registration, $data['status'], $data['note'] ?? null, $request->user());
+        }
+
+        return response()->json(['message' => $registrations->count().' request(s) '.$data['status'].'.']);
+    }
+
+    /** Registrar override: add a student to a section even when it is full. */
+    public function forceAdd(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'student' => ['required', 'string'], // student ID or email
+            'section_id' => ['required', 'exists:course_sections,id'],
+        ]);
+
+        $student = User::where('role', 'student')
+            ->where(fn ($q) => $q->where('email', $data['student'])
+                ->orWhereHas('student', fn ($q) => $q->where('student_id', $data['student'])))
+            ->first();
+        abort_unless($student, 422, 'No student found with that ID or email.');
+
+        $registration = $this->registrations->forceAdd($student, CourseSection::findOrFail($data['section_id']), $request->user());
+
+        return response()->json(['message' => "{$student->name} added to the section.", 'registration' => $registration], 201);
+    }
+
+    private function decision(Request $request): array
+    {
+        return $request->validate([
+            'status' => ['required', Rule::in([Registration::APPROVED, Registration::REJECTED])],
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
     }
 }

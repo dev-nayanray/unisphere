@@ -23,6 +23,13 @@ return [
     'min_attendance_percent' => 75,
 
     'max_credits_per_semester' => 21,
+    'min_credits_per_semester' => 9,
+
+    // Students with an unpaid invoice past its due date can't register.
+    'block_registration_on_overdue_fees' => (bool) env('BLOCK_REGISTRATION_ON_OVERDUE_FEES', true),
+
+    // A passed course may be retaken for grade improvement only at or below this grade point (C+ = 2.50).
+    'retake_max_grade_point' => 2.50,
 
     'default_grading_scheme' => [
         'attendance' => 10,

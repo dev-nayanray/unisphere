@@ -97,6 +97,8 @@ Two extra rules apply everywhere: deactivated accounts get 403 (`account_inactiv
 | `GET results/mine` | ✓ |  |  |  |  | ✓ |
 | `GET registration/pending` | ✓ | ✓ | ✓ | ✓ |  |  |
 | `PATCH registration/{registration}/decide` | ✓ | ✓ | ✓ | ✓ |  |  |
+| `PATCH registration/decide-many` | ✓ | ✓ | ✓ | ✓ |  |  |
+| `POST registration/force` | ✓ | ✓ |  |  |  |  |
 
 ## Fees
 

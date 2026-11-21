@@ -145,7 +145,10 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
     Route::middleware('role:registrar,department_head,teacher')->group(function () {
         Route::get('/registration/pending', [RegistrationController::class, 'pending']);
         Route::patch('/registration/{registration}/decide', [RegistrationController::class, 'decide']);
+        Route::patch('/registration/decide-many', [RegistrationController::class, 'decideMany']);
     });
+
+    Route::post('/registration/force', [RegistrationController::class, 'forceAdd'])->middleware('role:registrar');
 
     // ---- Fees & payments ----------------------------------------------------
     Route::get('/invoices', [InvoiceController::class, 'index'])->middleware('role:student,accounts');
