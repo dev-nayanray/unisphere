@@ -93,6 +93,16 @@ Two extra rules apply everywhere: deactivated accounts get 403 (`account_inactiv
 | `POST comment-bank` | ✓ | ✓ | ✓ | ✓ |  |  |
 | `DELETE comment-bank/{feedback}` | ✓ |  |  | ✓ |  |  |
 | `GET quizzes/{quiz}` | ✓ | ✓ | ✓ | ✓ |  | ✓ |
+| `PATCH quizzes/{quiz}` | ✓ | ✓ |  | ✓ |  |  |
+| `DELETE quizzes/{quiz}` | ✓ | ✓ |  | ✓ |  |  |
+| `GET quizzes/{quiz}/preview` | ✓ | ✓ |  | ✓ |  |  |
+| `POST quizzes/{quiz}/release-results` | ✓ | ✓ |  | ✓ |  |  |
+| `GET courses/{course}/question-bank` | ✓ | ✓ |  | ✓ |  |  |
+| `POST courses/{course}/question-bank` | ✓ | ✓ |  | ✓ |  |  |
+| `POST courses/{course}/question-bank/pick` | ✓ | ✓ |  | ✓ |  |  |
+| `DELETE question-bank/{item}` | ✓ | ✓ |  | ✓ |  |  |
+| `GET quiz-questions/template` | ✓ | ✓ | ✓ | ✓ |  |  |
+| `POST quiz-questions/parse-csv` | ✓ | ✓ | ✓ | ✓ |  |  |
 | `POST quizzes/{quiz}/start` |  |  |  |  |  | ✓ |
 | `POST quizzes/{quiz}/submit` |  |  |  |  |  | ✓ |
 | `PATCH quiz-attempts/{attempt}/grade` | ✓ | ✓ |  | ✓ |  |  |

@@ -15,6 +15,7 @@ use App\Models\Material;
 use App\Models\Notice;
 use App\Models\Post;
 use App\Models\Program;
+use App\Models\QuestionBankItem;
 use App\Models\Quiz;
 use App\Models\QuizAttempt;
 use App\Models\Registration;
@@ -144,6 +145,16 @@ class PermissionMatrixTest extends TestCase
             'DELETE comment-bank/{feedback}' => [self::SA, self::TEA], // the teacher's own snippet
 
             'GET quizzes/{quiz}' => self::MEMBERS,
+            'PATCH quizzes/{quiz}' => self::MANAGE,
+            'DELETE quizzes/{quiz}' => self::MANAGE,
+            'GET quizzes/{quiz}/preview' => self::MANAGE,
+            'POST quizzes/{quiz}/release-results' => self::MANAGE,
+            'GET courses/{course}/question-bank' => self::MANAGE, // teacher teaches the course
+            'POST courses/{course}/question-bank' => self::MANAGE,
+            'POST courses/{course}/question-bank/pick' => self::MANAGE,
+            'DELETE question-bank/{item}' => self::MANAGE,
+            'GET quiz-questions/template' => self::STAFF,
+            'POST quiz-questions/parse-csv' => self::STAFF,
             'POST quizzes/{quiz}/start' => [self::STU],
             'POST quizzes/{quiz}/submit' => [self::STU],
             'PATCH quiz-attempts/{attempt}/grade' => self::MANAGE,
@@ -262,7 +273,8 @@ class PermissionMatrixTest extends TestCase
         $quiz = Quiz::create([
             'course_section_id' => $section->id, 'author_id' => $teacher->id, 'title' => 'Quiz 1', 'duration_minutes' => 10, 'published_at' => now(),
         ]);
-        $quiz->questions()->create(['type' => 'mcq', 'question' => '2+2?', 'options' => ['3', '4'], 'correct_option' => 1, 'marks' => 1]);
+        $quiz->questions()->create(['type' => 'single', 'question' => '2+2?', 'options' => ['3', '4'], 'correct_option' => 1, 'marks' => 1]);
+        $bankItem = QuestionBankItem::create(['course_id' => $course->id, 'type' => 'single', 'question' => '1+1?', 'options' => ['1', '2'], 'correct_option' => 1, 'marks' => 1]);
         $attempt = QuizAttempt::create(['quiz_id' => $quiz->id, 'student_id' => $student->id, 'started_at' => now()]);
         $session = AttendanceSession::create([
             'course_section_id' => $section->id, 'created_by' => $teacher->id, 'date' => now()->toDateString(),
@@ -281,7 +293,7 @@ class PermissionMatrixTest extends TestCase
         $other = User::factory()->create();
 
         $this->ids = [
-            'section' => $section->id, 'post' => $post->id, 'comment' => $comment->id, 'topic' => $topic->id, 'attachment' => $attachment->id, 'feedback' => $feedback->id, 'material' => $material->id, 'assignment' => $assignment->id,
+            'section' => $section->id, 'post' => $post->id, 'comment' => $comment->id, 'topic' => $topic->id, 'attachment' => $attachment->id, 'feedback' => $feedback->id, 'item' => $bankItem->id, 'material' => $material->id, 'assignment' => $assignment->id,
             'submission' => $submission->id, 'quiz' => $quiz->id, 'attempt' => $attempt->id, 'session' => $session->id,
             'registration' => $registration->id, 'invoice' => $invoice->id, 'notice' => $notice->id,
             'complaint' => $complaint->id, 'user' => $other->id, 'department' => $dept->id, 'program' => $program->id,

@@ -28,6 +28,7 @@ import Import from './pages/admin/Import'
 import Admissions from './pages/admin/Admissions'
 import Routine from './pages/Routine'
 import GradingWorkspace from './pages/classroom/GradingWorkspace'
+import QuizBuilder from './pages/classroom/QuizBuilder'
 
 function RequireAuth({ children, roles }) {
   const { user, ready, hasRole, logout } = useAuth()
@@ -66,6 +67,8 @@ export default function App() {
         <Route index element={<Dashboard />} />
         <Route path="classes" element={<Classes />} />
         <Route path="classes/:id/*" element={<Classroom />} />
+        <Route path="classes/:sectionId/quizzes/new" element={<RequireAuth roles={['teacher', 'registrar']}><QuizBuilder /></RequireAuth>} />
+        <Route path="quizzes/:quizId/edit" element={<RequireAuth roles={['teacher', 'registrar']}><QuizBuilder /></RequireAuth>} />
         <Route path="assignments/:id" element={<AssignmentDetail />} />
         <Route path="assignments/:id/grade" element={<RequireAuth roles={['teacher', 'registrar']}><GradingWorkspace /></RequireAuth>} />
         <Route path="notices" element={<Notices />} />

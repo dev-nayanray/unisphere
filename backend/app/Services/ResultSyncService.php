@@ -80,7 +80,8 @@ class ResultSyncService
             }
 
             foreach ($attempts->get($registration->student_id, collect()) as $attempt) {
-                $max = $quizMax[$attempt->quiz_id] ?? 0;
+                // With "draw N questions", each attempt has its own maximum.
+                $max = (float) ($attempt->max_score ?: ($quizMax[$attempt->quiz_id] ?? 0));
                 if ($max > 0) {
                     $percentages[$quizCategory[$attempt->quiz_id]][] = (float) $attempt->score / $max * 100;
                 }

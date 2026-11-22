@@ -19,6 +19,7 @@ use App\Http\Controllers\Classroom\ClassroomController;
 use App\Http\Controllers\Classroom\FeedbackCommentController;
 use App\Http\Controllers\Classroom\GradebookController;
 use App\Http\Controllers\Classroom\MaterialController;
+use App\Http\Controllers\Classroom\QuestionBankController;
 use App\Http\Controllers\Classroom\QuizController;
 use App\Http\Controllers\Classroom\StreamController;
 use App\Http\Controllers\Classroom\SubmissionController;
@@ -162,6 +163,20 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
     Route::patch('/submissions/{submission}/grade', [SubmissionController::class, 'grade']);
 
     Route::get('/quizzes/{quiz}', [QuizController::class, 'show']);
+    Route::patch('/quizzes/{quiz}', [QuizController::class, 'update']);
+    Route::delete('/quizzes/{quiz}', [QuizController::class, 'destroy']);
+    Route::get('/quizzes/{quiz}/preview', [QuizController::class, 'preview']);
+    Route::post('/quizzes/{quiz}/release-results', [QuizController::class, 'releaseResults']);
+
+    // Question bank (per course) and CSV import for quiz questions
+    Route::get('/courses/{course}/question-bank', [QuestionBankController::class, 'index']);
+    Route::post('/courses/{course}/question-bank', [QuestionBankController::class, 'store']);
+    Route::post('/courses/{course}/question-bank/pick', [QuestionBankController::class, 'pick']);
+    Route::delete('/question-bank/{item}', [QuestionBankController::class, 'destroy']);
+    Route::middleware('role:registrar,department_head,teacher')->group(function () {
+        Route::get('/quiz-questions/template', [QuestionBankController::class, 'template']);
+        Route::post('/quiz-questions/parse-csv', [QuestionBankController::class, 'parseCsv']);
+    });
     Route::post('/quizzes/{quiz}/start', [QuizController::class, 'start']);
     Route::post('/quizzes/{quiz}/submit', [QuizController::class, 'submit']);
     Route::patch('/quiz-attempts/{attempt}/grade', [QuizController::class, 'gradeAttempt']);

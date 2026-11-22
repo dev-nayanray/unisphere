@@ -52,6 +52,7 @@ export default function Classwork({ cls }) {
       {cls.can_manage ? (
         <div className="flex flex-wrap gap-2">
           <button className="btn-primary" onClick={() => setModal('assignment')}>+ Assignment</button>
+          <Link className="btn-ghost" to={`/classes/${cls.id}/quizzes/new`}>+ Quiz</Link>
           <button className="btn-ghost" onClick={() => setModal('material')}>+ Material</button>
           <button className="btn-ghost" onClick={() => setModal('topics')}>Manage topics</button>
         </div>
@@ -77,12 +78,29 @@ export default function Classwork({ cls }) {
           <ul className="card divide-y divide-slate-100 p-0">
             {g.assignments.map((a) => <AssignmentRow key={`a${a.id}`} a={a} cls={cls} onEdit={() => setModal({ edit: a })} />)}
             {g.quizzes.map((q) => (
-              <li key={`q${q.id}`} className="flex items-center justify-between px-5 py-3">
-                <div>
-                  <p className="font-medium">📝 {q.title}</p>
-                  <p className="text-xs text-slate-500">Quiz · {q.questions_count} questions · {q.duration_minutes} min</p>
-                </div>
-                {!cls.can_manage && q.attempts?.[0]?.score != null && <Badge tone="emerald">{q.attempts[0].score}</Badge>}
+              <li key={`q${q.id}`}>
+                <Link
+                  to={cls.can_manage ? `/quizzes/${q.id}/edit` : `/quizzes/${q.id}/take`}
+                  className="flex items-center justify-between px-5 py-3 hover:bg-slate-50"
+                >
+                  <div>
+                    <p className="font-medium">📝 {q.title}</p>
+                    <p className="text-xs text-slate-500">
+                      Quiz · {q.draw_count || q.questions_count} questions · {q.duration_minutes} min
+                      {q.ends_at && ` · closes ${formatDate(q.ends_at, true)}`}
+                    </p>
+                  </div>
+                  {cls.can_manage ? (
+                    <span className="flex items-center gap-2 text-xs">
+                      {!q.published_at && <Badge>Draft</Badge>}
+                      <span className="text-slate-500">{q.submitted_count} submitted</span>
+                    </span>
+                  ) : q.attempts?.[0]?.submitted_at ? (
+                    q.attempts[0].score != null ? <Badge tone="emerald">{Number(q.attempts[0].score)}</Badge> : <Badge tone="indigo">Submitted</Badge>
+                  ) : (
+                    <Badge tone="amber">Not started</Badge>
+                  )}
+                </Link>
               </li>
             ))}
             {g.materials.map((m) => (
