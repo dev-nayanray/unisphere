@@ -60,6 +60,10 @@ Two extra rules apply everywhere: deactivated accounts get 403 (`account_inactiv
 | `GET classes/{section}/gradebook/summary` | ✓ | ✓ | ✓ | ✓ |  | ✓ |
 | `PUT classes/{section}/gradebook/scheme` | ✓ | ✓ |  | ✓ |  |  |
 | `POST classes/{section}/gradebook/sync` | ✓ | ✓ |  | ✓ |  |  |
+| `PATCH classes/{section}/gradebook/cells` | ✓ | ✓ |  | ✓ |  |  |
+| `PUT classes/{section}/gradebook/overrides/{student}` | ✓ | ✓ |  | ✓ |  |  |
+| `PATCH classes/{section}/gradebook/settings` | ✓ | ✓ |  | ✓ |  |  |
+| `GET classes/{section}/gradebook/export.csv` | ✓ | ✓ | ✓ | ✓ |  |  |
 | `GET classes/{section}/attendance` | ✓ | ✓ |  | ✓ |  |  |
 | `POST classes/{section}/attendance` | ✓ | ✓ |  | ✓ |  |  |
 | `GET classes/{section}/attendance/report` | ✓ | ✓ | ✓ | ✓ |  | ✓ |

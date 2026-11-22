@@ -122,6 +122,10 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
         Route::get('/gradebook/summary', [GradebookController::class, 'summary']);
         Route::put('/gradebook/scheme', [GradebookController::class, 'updateScheme']);
         Route::post('/gradebook/sync', [GradebookController::class, 'sync']);
+        Route::patch('/gradebook/cells', [GradebookController::class, 'updateCell']);
+        Route::put('/gradebook/overrides/{student}', [GradebookController::class, 'override'])->whereNumber('student');
+        Route::patch('/gradebook/settings', [GradebookController::class, 'updateSettings']);
+        Route::get('/gradebook/export.csv', [GradebookController::class, 'export']);
 
         Route::get('/attendance', [AttendanceController::class, 'index']);
         Route::post('/attendance', [AttendanceController::class, 'store']);

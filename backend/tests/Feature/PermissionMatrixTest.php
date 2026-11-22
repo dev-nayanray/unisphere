@@ -107,6 +107,10 @@ class PermissionMatrixTest extends TestCase
             'GET classes/{section}/gradebook/summary' => self::MEMBERS,
             'PUT classes/{section}/gradebook/scheme' => self::MANAGE,
             'POST classes/{section}/gradebook/sync' => self::MANAGE,
+            'PATCH classes/{section}/gradebook/cells' => self::MANAGE,
+            'PUT classes/{section}/gradebook/overrides/{student}' => self::MANAGE,
+            'PATCH classes/{section}/gradebook/settings' => self::MANAGE,
+            'GET classes/{section}/gradebook/export.csv' => self::STAFF,
             'GET classes/{section}/attendance' => self::MANAGE,
             'POST classes/{section}/attendance' => self::MANAGE,
             'GET classes/{section}/attendance/report' => self::MEMBERS,
@@ -305,7 +309,7 @@ class PermissionMatrixTest extends TestCase
             'registration' => $registration->id, 'invoice' => $invoice->id, 'notice' => $notice->id,
             'complaint' => $complaint->id, 'user' => $other->id, 'department' => $dept->id, 'program' => $program->id,
             'semester' => $semester->id, 'course' => $course->id,
-            'application' => $application->id, 'type' => 'students', 'index' => 0, 'room' => '701',
+            'application' => $application->id, 'student' => $this->users[self::STU]->id, 'type' => 'students', 'index' => 0, 'room' => '701',
         ];
 
         // Some routes need a body to reach their authorization check.

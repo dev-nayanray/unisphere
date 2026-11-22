@@ -16,7 +16,7 @@ class CourseSection extends Model
 {
     protected $fillable = [
         'course_id', 'semester_id', 'teacher_id', 'section', 'room', 'capacity',
-        'join_code', 'schedule', 'grading_scheme', 'cover_color', 'stream_permission',
+        'join_code', 'schedule', 'grading_scheme', 'cover_color', 'stream_permission', 'missing_as_zero',
     ];
 
     /** stream_permission values: what students may do in the class stream. */
@@ -29,6 +29,7 @@ class CourseSection extends Model
         return [
             'schedule' => 'array',
             'grading_scheme' => 'array',
+            'missing_as_zero' => 'boolean',
         ];
     }
 
