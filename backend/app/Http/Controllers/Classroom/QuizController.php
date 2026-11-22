@@ -122,7 +122,9 @@ class QuizController extends Controller
         }
 
         return response()->json([
-            ...$quiz->only(['id', 'title', 'instructions', 'category', 'duration_minutes', 'starts_at', 'ends_at', 'show_results', 'course_section_id']),
+            ...$quiz->only(['id', 'title', 'instructions', 'category', 'duration_minutes', 'starts_at', 'ends_at', 'show_results', 'display_mode', 'course_section_id']),
+            'is_open' => $quiz->isOpen(),
+            'results_visible' => $quiz->resultsVisible(),
             'question_count' => $quiz->draw_count ?: $quiz->questions()->count(),
             'attempt' => $quiz->attempts()->where('student_id', $request->user()->id)->first(['id', 'started_at', 'submitted_at']),
         ]);
@@ -160,11 +162,23 @@ class QuizController extends Controller
     public function start(Request $request, Quiz $quiz): JsonResponse
     {
         Gate::authorize('take', $quiz);
-        abort_unless($quiz->isOpen(), 422, 'This quiz is not open right now.');
 
         $attempt = QuizAttempt::where('quiz_id', $quiz->id)->where('student_id', $request->user()->id)->first();
 
+        if ($attempt?->isSubmitted()) {
+            return response()->json(['message' => 'You have already submitted this quiz.', 'attempt' => $attempt->only(['id', 'submitted_at'])], 422);
+        }
+
+        // Time ran out while the student was away: submit what was saved.
+        if ($attempt && $attempt->isExpired()) {
+            $attempt->finalize($this->grader, auto: true);
+
+            return response()->json(['message' => 'Time is up. Your saved answers were submitted.', 'attempt' => $attempt->only(['id', 'submitted_at'])], 422);
+        }
+
         if (! $attempt) {
+            abort_unless($quiz->isOpen(), 422, 'This quiz is not open right now.');
+
             $questions = $quiz->questions()->get();
             if ($quiz->draw_count && $quiz->draw_count < $questions->count()) {
                 $questions = $questions->random($quiz->draw_count);
@@ -183,42 +197,235 @@ class QuizController extends Controller
         }
 
         return response()->json([
-            'attempt' => $attempt->only(['id', 'started_at', 'submitted_at', 'answers', 'max_score']),
-            'questions' => $attempt->questions()->map(fn ($q) => $q->forStudent($quiz->shuffle_options))->values(),
+            'attempt' => [
+                ...$attempt->only(['id', 'started_at', 'answers', 'max_score']),
+                'deadline' => $attempt->deadline()->toIso8601String(),
+                'seconds_left' => $attempt->secondsLeft(),
+            ],
+            'display_mode' => $quiz->display_mode,
+            // Options are shuffled the same way on every resume for this attempt.
+            'questions' => $this->questionsFor($attempt, $quiz),
         ]);
+    }
+
+    /** Autosave (every few seconds and on change). Refused once time is up. */
+    public function saveAnswers(Request $request, Quiz $quiz): JsonResponse
+    {
+        Gate::authorize('take', $quiz);
+        $attempt = $this->ownAttempt($request, $quiz);
+
+        abort_if($attempt->isSubmitted(), 422, 'This quiz has already been submitted.');
+        abort_if($attempt->isExpired(QuizAttempt::GRACE_SECONDS), 422, 'Time is up.');
+
+        $answers = $request->validate(['answers' => ['present', 'array']])['answers'];
+        // Only answers to this attempt's own questions are kept.
+        $answers = array_intersect_key($answers, array_flip($attempt->question_ids ?? array_keys($answers)));
+
+        $attempt->update(['answers' => $answers, 'last_saved_at' => now()]);
+
+        return response()->json(['saved_at' => $attempt->last_saved_at, 'seconds_left' => $attempt->secondsLeft()]);
+    }
+
+    /** Record a tab switch or copy/paste. The teacher sees the counts. */
+    public function logEvent(Request $request, Quiz $quiz): JsonResponse
+    {
+        Gate::authorize('take', $quiz);
+        $attempt = $this->ownAttempt($request, $quiz);
+
+        if (! $attempt->isSubmitted()) {
+            $type = $request->validate(['type' => ['required', Rule::in(QuizAttempt::INTEGRITY_EVENTS)]])['type'];
+            $integrity = $attempt->integrity ?? [];
+            $integrity[$type] = ($integrity[$type] ?? 0) + 1;
+            $integrity['events'] = array_slice([...($integrity['events'] ?? []), ['type' => $type, 'at' => now()->toIso8601String()]], -100);
+            $attempt->update(['integrity' => $integrity]);
+        }
+
+        return response()->json(['ok' => true]);
     }
 
     /** Submit answers. Everything except written (short) answers is graded instantly. */
     public function submit(Request $request, Quiz $quiz): JsonResponse
     {
         Gate::authorize('take', $quiz);
+        $attempt = $this->ownAttempt($request, $quiz);
+        abort_if($attempt->isSubmitted(), 422, 'You have already submitted this quiz.');
 
-        $attempt = QuizAttempt::where('quiz_id', $quiz->id)->where('student_id', $request->user()->id)->firstOrFail();
-        abort_if($attempt->submitted_at !== null, 422, 'You have already submitted this quiz.');
+        $answers = $request->validate(['answers' => ['present', 'array']])['answers'];
 
-        $deadline = $attempt->started_at->copy()->addMinutes($quiz->duration_minutes + 1); // 1 min grace
-        abort_if(now()->greaterThan($deadline), 422, 'Time is up.');
-
-        $answers = $request->validate(['answers' => ['required', 'array']])['answers'];
-        $questions = $attempt->questions()->each(fn ($q) => $q->withAnswers());
-        $graded = $this->grader->gradeAll($questions, $answers);
-
-        $attempt->update([
-            'answers' => $answers,
-            'results' => $graded['results'],
-            'score' => $graded['score'],
-            'submitted_at' => now(),
-        ]);
+        // The deadline comes from the server. After it (plus a short grace for a
+        // submit already in flight), only the last autosave counts.
+        if ($attempt->isExpired(QuizAttempt::GRACE_SECONDS)) {
+            $attempt->finalize($this->grader, auto: true);
+            $message = 'Time was up, so your last saved answers were submitted.';
+        } else {
+            $attempt->finalize($this->grader, array_intersect_key($answers, array_flip($attempt->question_ids ?? array_keys($answers))));
+            $message = null;
+        }
 
         $visible = $quiz->resultsVisible();
+        $attempt->refresh();
 
         return response()->json([
-            'message' => $graded['score'] === null
+            'message' => $message ?? ($attempt->score === null
                 ? 'Submitted. Written answers will be graded by your teacher.'
-                : ($visible ? 'Submitted.' : 'Submitted. Your teacher will release the results later.'),
-            'score' => $visible ? $graded['score'] : null,
+                : ($visible ? 'Submitted.' : 'Submitted. Your teacher will release the results later.')),
+            'score' => $visible ? $attempt->score : null,
             'max_marks' => (float) $attempt->max_score,
+            'results_visible' => $visible,
         ]);
+    }
+
+    /** The student's results: score, their answers, the correct answers and explanations (when allowed). */
+    public function result(Request $request, Quiz $quiz): JsonResponse
+    {
+        Gate::authorize('view', $quiz);
+        $attempt = $this->ownAttempt($request, $quiz);
+        abort_unless($attempt->isSubmitted(), 422, 'Submit the quiz first.');
+
+        if (! $quiz->resultsVisible()) {
+            return response()->json(['results_visible' => false, 'submitted_at' => $attempt->submitted_at, 'show_results' => $quiz->show_results]);
+        }
+
+        return response()->json([
+            'results_visible' => true,
+            'score' => $attempt->score,
+            'max_score' => $attempt->max_score,
+            'submitted_at' => $attempt->submitted_at,
+            'questions' => $this->review($attempt),
+        ]);
+    }
+
+    /** Teacher: every attempt plus per-question statistics. */
+    public function attempts(Quiz $quiz): JsonResponse
+    {
+        Gate::authorize('update', $quiz);
+
+        $attempts = $quiz->attempts()->with('student:id,name')->orderBy('submitted_at')->get();
+        $questions = $quiz->questions()->get()->each(fn ($q) => $q->withAnswers());
+
+        $stats = $questions->map(function ($q) use ($attempts) {
+            $answered = $attempts->filter(fn ($a) => $a->isSubmitted() && in_array($q->id, $a->question_ids ?? [$q->id], true));
+            $results = $answered->map(fn ($a) => $a->results[$q->id] ?? null)->filter();
+            $correct = $results->where('correct', true)->count();
+
+            return [
+                'question_id' => $q->id,
+                'question' => $q->question,
+                'type' => $q->type,
+                'attempts' => $answered->count(),
+                'percent_correct' => $q->needsManualGrading() || $answered->isEmpty() ? null : round($correct / $answered->count() * 100, 1),
+                'average_score' => $results->whereNotNull('score')->avg('score'),
+                'pending' => $results->whereNull('score')->count(),
+            ];
+        });
+
+        return response()->json([
+            'attempts' => $attempts->map(fn ($a) => [
+                'id' => $a->id,
+                'student' => $a->student,
+                'started_at' => $a->started_at,
+                'submitted_at' => $a->submitted_at,
+                'auto_submitted' => $a->auto_submitted,
+                'score' => $a->score,
+                'max_score' => $a->max_score,
+                'needs_grading' => $a->isSubmitted() && $a->score === null,
+                'integrity' => $a->integritySummary(),
+            ]),
+            'stats' => $stats,
+        ]);
+    }
+
+    /** Teacher: one attempt question by question, to mark written answers. */
+    public function showAttempt(QuizAttempt $attempt): JsonResponse
+    {
+        Gate::authorize('grade', $attempt);
+
+        return response()->json([
+            ...$attempt->load('student:id,name')->only(['id', 'student', 'score', 'max_score', 'started_at', 'submitted_at', 'auto_submitted']),
+            'integrity' => $attempt->integrity ?? [],
+            'questions' => $this->review($attempt),
+        ]);
+    }
+
+    /** Teacher marks written answers (or overrides any question): {scores: {question_id: points}}. */
+    public function gradeAnswers(Request $request, QuizAttempt $attempt): JsonResponse
+    {
+        Gate::authorize('grade', $attempt);
+        abort_unless($attempt->isSubmitted(), 422, 'This attempt has not been submitted yet.');
+
+        $questions = $attempt->questions()->keyBy('id');
+        $scores = $request->validate(['scores' => ['required', 'array']])['scores'];
+
+        $results = $attempt->results ?? [];
+        foreach ($scores as $questionId => $points) {
+            $question = $questions->get((int) $questionId);
+            if (! $question) {
+                throw ValidationException::withMessages(["scores.{$questionId}" => 'That question is not in this attempt.']);
+            }
+            if (! is_numeric($points) || $points < 0 || $points > (float) $question->marks) {
+                throw ValidationException::withMessages(["scores.{$questionId}" => 'Give between 0 and '.(float) $question->marks.' points.']);
+            }
+            $results[$questionId] = ['score' => (float) $points, 'correct' => (float) $points >= (float) $question->marks, 'manual' => true];
+        }
+
+        $attempt->update(['results' => $results]);
+        $attempt->recalculateScore();
+
+        return response()->json($attempt->fresh()->only(['id', 'score', 'max_score', 'results']));
+    }
+
+    /** Teacher lets a student take the quiz again (deletes the attempt). */
+    public function resetAttempt(QuizAttempt $attempt): JsonResponse
+    {
+        Gate::authorize('grade', $attempt);
+        $attempt->delete();
+
+        return response()->json(['message' => 'Attempt removed. The student can take the quiz again.']);
+    }
+
+    private function ownAttempt(Request $request, Quiz $quiz): QuizAttempt
+    {
+        return QuizAttempt::where('quiz_id', $quiz->id)->where('student_id', $request->user()->id)->firstOrFail();
+    }
+
+    /** Questions for the student, with options shuffled consistently for this attempt. */
+    private function questionsFor(QuizAttempt $attempt, Quiz $quiz): array
+    {
+        return $attempt->questions()->map(function ($q) use ($attempt, $quiz) {
+            $data = $q->forStudent(false);
+            if ($quiz->shuffle_options && $q->type !== 'true_false') {
+                // Seeded by attempt + question, so a refresh shows the same order.
+                mt_srand(crc32("{$attempt->id}-{$q->id}"));
+                $options = $data['options'];
+                for ($i = count($options) - 1; $i > 0; $i--) {
+                    $j = mt_rand(0, $i);
+                    [$options[$i], $options[$j]] = [$options[$j], $options[$i]];
+                }
+                $data['options'] = $options;
+                mt_srand();
+            }
+
+            return $data;
+        })->values()->all();
+    }
+
+    /** Each question with the student's answer, the correct answer, points and explanation. */
+    private function review(QuizAttempt $attempt): array
+    {
+        return $attempt->questions()->map(function ($q) use ($attempt) {
+            $q->withAnswers();
+
+            return [
+                ...$q->forStudent(false),
+                'answer' => $attempt->answers[$q->id] ?? null,
+                'result' => $attempt->results[$q->id] ?? null,
+                'correct_option' => $q->correct_option,
+                'correct_options' => $q->correct_options,
+                'correct_numeric' => $q->correct_numeric,
+                'tolerance' => $q->tolerance,
+                'explanation' => $q->explanation,
+            ];
+        })->values()->all();
     }
 
     /** Teacher sets the final score after reviewing written answers. */
@@ -249,6 +456,7 @@ class QuizController extends Controller
             'shuffle_options' => ['sometimes', 'boolean'],
             'show_results' => ['sometimes', Rule::in([Quiz::RESULTS_IMMEDIATELY, Quiz::RESULTS_AFTER_CLOSE, Quiz::RESULTS_MANUAL])],
             'draw_count' => ['nullable', 'integer', 'min:1'],
+            'display_mode' => ['sometimes', Rule::in(['all', 'one'])],
             'publish' => ['sometimes', 'boolean'],
             'questions' => [$req, 'array', 'min:1', 'max:200'],
             ...QuizQuestionRules::rules(),
@@ -270,7 +478,7 @@ class QuizController extends Controller
     {
         $settings = collect($data)->only([
             'title', 'category', 'topic_id', 'duration_minutes', 'starts_at', 'ends_at',
-            'shuffle_questions', 'shuffle_options', 'show_results', 'draw_count',
+            'shuffle_questions', 'shuffle_options', 'show_results', 'draw_count', 'display_mode',
         ])->all();
 
         if (array_key_exists('instructions', $data)) {

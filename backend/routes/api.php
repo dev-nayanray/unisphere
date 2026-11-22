@@ -179,6 +179,13 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
     });
     Route::post('/quizzes/{quiz}/start', [QuizController::class, 'start']);
     Route::post('/quizzes/{quiz}/submit', [QuizController::class, 'submit']);
+    Route::patch('/quizzes/{quiz}/answers', [QuizController::class, 'saveAnswers']);
+    Route::post('/quizzes/{quiz}/events', [QuizController::class, 'logEvent']);
+    Route::get('/quizzes/{quiz}/result', [QuizController::class, 'result']);
+    Route::get('/quizzes/{quiz}/attempts', [QuizController::class, 'attempts']);
+    Route::get('/quiz-attempts/{attempt}', [QuizController::class, 'showAttempt']);
+    Route::patch('/quiz-attempts/{attempt}/answers', [QuizController::class, 'gradeAnswers']);
+    Route::delete('/quiz-attempts/{attempt}', [QuizController::class, 'resetAttempt']);
     Route::patch('/quiz-attempts/{attempt}/grade', [QuizController::class, 'gradeAttempt']);
 
     // ---- Attendance ---------------------------------------------------------

@@ -12,3 +12,5 @@ Artisan::command('unisphere:recalculate-cgpa', function () {
 Schedule::command('unisphere:recalculate-cgpa')->dailyAt('02:00');
 
 Schedule::command('unisphere:publish-scheduled-posts')->everyMinute()->withoutOverlapping();
+
+Schedule::command('unisphere:submit-expired-quiz-attempts')->everyMinute()->withoutOverlapping();

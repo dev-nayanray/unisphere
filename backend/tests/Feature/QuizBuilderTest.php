@@ -70,8 +70,9 @@ class QuizBuilderTest extends TestCase
             ->assertOk()
             ->assertJsonCount(5, 'questions')
             ->assertJsonPath('questions.2.options', ['True', 'False']) // filled in automatically
-            ->assertJsonPath('questions.1.correct_options', [0, 2])
-            ->assertJsonPath('max_marks', 10);
+            ->assertJsonPath('questions.1.correct_options', [0, 2]);
+
+        $this->assertEquals(10, $this->actingAs($this->teacher)->getJson("/api/quizzes/{$quiz->id}")->json('max_marks'));
     }
 
     public function test_questions_need_a_valid_answer_key(): void

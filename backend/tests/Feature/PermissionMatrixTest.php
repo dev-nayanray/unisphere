@@ -158,6 +158,13 @@ class PermissionMatrixTest extends TestCase
             'POST quizzes/{quiz}/start' => [self::STU],
             'POST quizzes/{quiz}/submit' => [self::STU],
             'PATCH quiz-attempts/{attempt}/grade' => self::MANAGE,
+            'PATCH quizzes/{quiz}/answers' => [self::STU],
+            'POST quizzes/{quiz}/events' => [self::STU],
+            'GET quizzes/{quiz}/result' => self::MEMBERS, // non-takers get 404: no attempt of their own
+            'GET quizzes/{quiz}/attempts' => self::MANAGE,
+            'GET quiz-attempts/{attempt}' => self::MANAGE,
+            'PATCH quiz-attempts/{attempt}/answers' => self::MANAGE,
+            'DELETE quiz-attempts/{attempt}' => self::MANAGE,
 
             // Attendance
             'GET attendance-sessions/{session}' => self::MANAGE,

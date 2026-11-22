@@ -106,6 +106,13 @@ Two extra rules apply everywhere: deactivated accounts get 403 (`account_inactiv
 | `POST quizzes/{quiz}/start` |  |  |  |  |  | ✓ |
 | `POST quizzes/{quiz}/submit` |  |  |  |  |  | ✓ |
 | `PATCH quiz-attempts/{attempt}/grade` | ✓ | ✓ |  | ✓ |  |  |
+| `PATCH quizzes/{quiz}/answers` |  |  |  |  |  | ✓ |
+| `POST quizzes/{quiz}/events` |  |  |  |  |  | ✓ |
+| `GET quizzes/{quiz}/result` | ✓ | ✓ | ✓ | ✓ |  | ✓ |
+| `GET quizzes/{quiz}/attempts` | ✓ | ✓ |  | ✓ |  |  |
+| `GET quiz-attempts/{attempt}` | ✓ | ✓ |  | ✓ |  |  |
+| `PATCH quiz-attempts/{attempt}/answers` | ✓ | ✓ |  | ✓ |  |  |
+| `DELETE quiz-attempts/{attempt}` | ✓ | ✓ |  | ✓ |  |  |
 
 ## Attendance
 

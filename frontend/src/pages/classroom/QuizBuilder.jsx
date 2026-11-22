@@ -41,7 +41,7 @@ export default function QuizBuilder() {
 
   const [settings, setSettings] = useState({
     title: '', instructions: '', category: 'quiz', topic_id: '', duration_minutes: 20, starts_at: '', ends_at: '',
-    shuffle_questions: true, shuffle_options: false, show_results: 'immediately', draw_count: '',
+    shuffle_questions: true, shuffle_options: false, show_results: 'immediately', draw_count: '', display_mode: 'all',
   })
   const [questions, setQuestions] = useState([blank()])
   const [errors, setErrors] = useState({})
@@ -56,7 +56,7 @@ export default function QuizBuilder() {
     setSettings({
       title: q.title, instructions: q.instructions || '', category: q.category, topic_id: q.topic_id || '',
       duration_minutes: q.duration_minutes, starts_at: toLocal(q.starts_at), ends_at: toLocal(q.ends_at),
-      shuffle_questions: q.shuffle_questions, shuffle_options: q.shuffle_options, show_results: q.show_results, draw_count: q.draw_count || '',
+      shuffle_questions: q.shuffle_questions, shuffle_options: q.shuffle_options, show_results: q.show_results, draw_count: q.draw_count || '', display_mode: q.display_mode || 'all',
     })
     setQuestions(q.questions.map((x) => ({ ...blank(x.type), ...x, key: String(x.id), options: x.options || [], correct_options: x.correct_options || [], explanation: x.explanation || '' })))
     setLocked(q.submitted_count > 0)
@@ -141,6 +141,7 @@ export default function QuizBuilder() {
           <Link to={`/classes/${classId}`} className="text-sm text-indigo-600">← {cls.data?.course?.code} {cls.data?.course?.title}</Link>
           <h1 className="text-2xl font-semibold">{editing ? 'Edit quiz' : 'New quiz'}</h1>
         </div>
+        {editing && <Link className="btn-ghost" to={`/quizzes/${quizId}/results`}>Results ({existing.data?.submitted_count ?? 0})</Link>}
         {editing && <button className="btn-ghost" onClick={() => setModal('preview')}>Preview as student</button>}
         <button className="btn-ghost" disabled={busy} onClick={() => save(false)}>Save draft</button>
         <button className="btn-primary" disabled={busy} onClick={() => save(true)}>{existing.data?.published_at ? 'Save' : 'Publish'}</button>
@@ -200,6 +201,13 @@ export default function QuizBuilder() {
           <span className="label">Questions per student (blank = all {questions.length})</span>
           <input type="number" min="1" className="input" value={settings.draw_count} onChange={set('draw_count')} placeholder="e.g. 10 random" />
           <Err text={errFor('draw_count')} />
+        </label>
+        <label>
+          <span className="label">Layout</span>
+          <select className="input" value={settings.display_mode} onChange={set('display_mode')}>
+            <option value="all">All questions on one page</option>
+            <option value="one">One question at a time</option>
+          </select>
         </label>
         <div className="flex flex-col justify-end gap-1 text-sm">
           <label className="flex items-center gap-2"><input type="checkbox" checked={settings.shuffle_questions} onChange={set('shuffle_questions')} /> Shuffle question order</label>

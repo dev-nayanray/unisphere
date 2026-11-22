@@ -15,7 +15,7 @@ class Quiz extends Model
     protected $fillable = [
         'course_section_id', 'author_id', 'topic_id', 'title', 'instructions', 'category', 'duration_minutes',
         'starts_at', 'ends_at', 'shuffle_questions', 'shuffle_options', 'show_results', 'results_released_at',
-        'draw_count', 'published_at',
+        'draw_count', 'display_mode', 'published_at',
     ];
 
     protected function casts(): array
